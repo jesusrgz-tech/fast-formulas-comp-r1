@@ -1,22 +1,12 @@
-/******************************************************************************
-* *
-* FORMULA NAME      : GB_CMP_APERTURA_BR                                      *
-* FORMULA TYPE      : Compensation Default and Override                       *
-* DESCRIPTION       : Calcula la apertura del colaborador para Brasil.        *
-* Fórmula: ((Sueldo - Min) / ((Max - Min) / 30)) + 70     *
-* *
-*-----------------------------------------------------------------------------*
-* CREATED BY        : IT-GLOBAL                                               *
-* CREATION DATE     : 10-Abril-2026                                           *
-* LAST UPDATE DATE  : 10-Abril-2026                                           *
-* *
-*******************************************************************************
-* Change History:                                                             *
-* Name              Date             Version          Comments                *
-*-----------------------------------------------------------------------------*
-* It Global         10-Abril-2026      1                Versión Inicial         *
-* *
-******************************************************************************/
+/**********************************************************************
+FORMULA NAME: GB_CMP_APERTURA_BR
+CREATED_BY : IT-GLOBAL
+CREATION_DATE : 10 de Abril del 2026
+LAST_UPDATE_DATE : 10 de Abril del 2026
+FORMULA TYPE : Compensation Default and Override
+DESCRIPTION : Calcula la apertura del colaborador para Brasil
+              ( ( Sueldo - Minimo ) / ( ( Maximo - Minimo ) / 30 ) ) + 70
+**********************************************************************/
 
 INPUTS ARE CMP_IV_PLAN_EXTRACTION_DATE (text)
 
@@ -30,7 +20,7 @@ HR_EXTRACT_DATE = TO_DATE(CMP_IV_PLAN_EXTRACTION_DATE, 'YYYY/MM/DD')
 
 l_log = SET_LOG('*** INICIO GB_CMP_APERTURA_BR ***')
 
-/********************************************* DATOS DEL ASSIGNMENT ****************************************/
+/***** DATOS DEL ASSIGNMENT *****/
 CHANGE_CONTEXTS(EFFECTIVE_DATE = HR_EXTRACT_DATE)
 (
     L_GRADE = PER_ASG_GRADE_ID
@@ -41,7 +31,7 @@ CHANGE_CONTEXTS(EFFECTIVE_DATE = HR_EXTRACT_DATE)
 l_log = SET_LOG('Grade ID: ' || TO_CHAR(L_GRADE))
 l_log = SET_LOG('Sueldo: ' || TO_CHAR(L_SUELDO))
 
-/********************************************** OBTENER MIN Y MAX *****************************************/
+/***** OBTENER MIN Y MAX *****/
 L_PARAM_PER = '|=PERSON_ID=' || TO_CHAR(L_PER_ID)
 L_RATE_ID = TO_NUM(GET_VALUE_SET('GB_CMP_ASG_RATE_ID', L_PARAM_PER))
 
@@ -64,7 +54,7 @@ ELSE
 l_log = SET_LOG('Min: ' || TO_CHAR(L_MIN))
 l_log = SET_LOG('Max: ' || TO_CHAR(L_MAX))
 
-/****************************************************** CALCULO APERTURA **********************************/
+/***** CALCULO APERTURA *****/
 IF L_MAX = L_MIN THEN
 (
     l_log = SET_LOG('Max igual a Min, retorna 0')
