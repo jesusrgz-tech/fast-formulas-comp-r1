@@ -130,7 +130,7 @@ ELSE IF L_LEGAL_EMPLOYER = 'Bimbo Ecuador S.A.' THEN
     L_KEY_UDT = 'EC'
 ELSE IF L_LEGAL_EMPLOYER = 'Bimbo de Costa Rica, S.A.' THEN
     L_KEY_UDT = 'CR'
-ELSE IF L_LEGAL_EMPLOYER = 'Barcel  de El Salvador, S.A. de C.V.' OR L_LEGAL_EMPLOYER =  'Barcel De El Salvador, S.A. de C.V.' OR L_LEGAL_EMPLOYER = 'Bimbo de El Salvador, S.A. de C.V.' THEN
+ELSE IF L_LEGAL_EMPLOYER = 'Barcel De El Salvador, S.A. de C.V.' OR L_LEGAL_EMPLOYER = 'Bimbo de El Salvador, S.A. de C.V.' THEN
     L_KEY_UDT = 'SV'
 ELSE IF L_LEGAL_EMPLOYER = 'Bimbo de Centroamerica, S.A.' OR L_LEGAL_EMPLOYER = 'VeCentral, S.A.' OR L_LEGAL_EMPLOYER = 'Centro de Servicios Compartidos Bimbo, S.A.' THEN
     L_KEY_UDT = 'GT'

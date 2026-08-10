@@ -1,36 +1,40 @@
 /******************************************************************************
-* *
-* FORMULA NAME      : GB_CMP_INC_PLAN_SALARIAL_PCT
-* FORMULA TYPE      : Compensation Default and Override
-* DESCRIPTION       : Retorna el porcentaje de incremento del plan salarial
-*                     para R4 (Espana, Portugal, Marruecos) desde UDT
-*                     GB_CMP_INC_PLAN_SALARIAL usando key por pais derivada
-*                     del Legal Employer.
-* *
+* FORMULA NAME      : GB_CMP_INCRM_MERITO_PORCENTAJE                     *
+* FORMULA TYPE      : Compensation Default and Override                       *
+* DESCRIPTION       : Obtiene el porcentaje promedio de incremento por merito *
+*                     desde UDT GB_INCREMENTO_MERITO para R4 (Espana,         *
+*                     Portugal, Marruecos). Key derivada del Legal Employer.  *
 *-----------------------------------------------------------------------------*
 * CREATED BY        : IT-GLOBAL                                               *
-* CREATION DATE     : 27-Mayo-2026                                            *
+* CREATION DATE     : 08-Mayo-2026                                            *
 * LAST UPDATE DATE  : 27-Mayo-2026                                            *
-* *
-*******************************************************************************
-* Change History:                                                             *
-* Name              Date             Version          Comments                *
 *-----------------------------------------------------------------------------*
-* It Global         27-Mayo-2026     1                Version Inicial R4      *
-* *
+* Change History:                                                             *
+* Author          | Date            | Ver | Comments                          *
+*-----------------+-----------------+-----+-----------------------------------*
+* IT Global       | 08-Mayo-2026    |  1  | Version Inicial                   *
+* IT Global       | 27-Mayo-2026    |  2  | Adaptacion R4: key por pais       *
+*                 |                 |     | MOR/ESP/PT desde Legal Employer,  *
+*                 |                 |     | correccion nombre UDT             *
 ******************************************************************************/
 
-INPUTS ARE
+INPUTS ARE CMP_IV_PLAN_START_DATE (text),
+CMP_IV_PLAN_END_DATE (text),
+CMP_IVR_ASSIGNMENT_ID(NUMBER_NUMBER),
 CMP_IV_PLAN_EXTRACTION_DATE (text)
 
-DEFAULT FOR CMP_IV_PLAN_EXTRACTION_DATE IS '4012/01/01'
 DEFAULT FOR PER_ASG_ORG_LEGAL_EMPLOYER_NAME IS 'N/LE'
 
+/*============================================================================
+  FECHAS BASE
+============================================================================*/
 HR_EXTRACT_DATE = TO_DATE(CMP_IV_PLAN_EXTRACTION_DATE, 'YYYY/MM/DD')
 
-l_log = SET_LOG('*** INICIO GB_CMP_INC_PLAN_SALARIAL_PCT_R4 ***')
+l_log = SET_LOG('*** INICIO GB_CMP_INCRM_MERITO_PORCENTAJE_R4 ***')
 
-/***** LEGAL EMPLOYER *****/
+/*============================================================================
+  LEGAL EMPLOYER Y KEY UDT POR PAIS
+============================================================================*/
 CHANGE_CONTEXTS(EFFECTIVE_DATE = HR_EXTRACT_DATE)
 (
     L_LEGAL_EMPLOYER = PER_ASG_ORG_LEGAL_EMPLOYER_NAME
@@ -38,7 +42,6 @@ CHANGE_CONTEXTS(EFFECTIVE_DATE = HR_EXTRACT_DATE)
 
 l_log = SET_LOG('Legal Employer: ' || L_LEGAL_EMPLOYER)
 
-/* ============ MAPEO LEGAL EMPLOYER A KEY UDT ============ */
 IF L_LEGAL_EMPLOYER = 'Bimbo de Colombia, S.A.' THEN
     L_KEY_UDT = 'CO'
 ELSE IF L_LEGAL_EMPLOYER = 'Bimbo Ecuador S.A.' THEN
@@ -68,39 +71,22 @@ ELSE IF L_LEGAL_EMPLOYER = 'Bimbo de Nicaragua, S.A.' THEN
 ELSE IF L_LEGAL_EMPLOYER = 'Barcel, S.A. de C.V.' OR L_LEGAL_EMPLOYER = 'Bimbonet Servicios, S.A.P.I. de C.V.' OR L_LEGAL_EMPLOYER = 'Bimbo, S.A. de C.V.' OR L_LEGAL_EMPLOYER = 'Corporativo Bimbo, S.A. de C.V.' OR L_LEGAL_EMPLOYER = 'Moldes y Exhibidores, S.A. de C.V.' OR L_LEGAL_EMPLOYER = 'Tradicion en Pastelerías, S.A. de C.V.' THEN
     L_KEY_UDT = 'MEX'
 ELSE
-    L_KEY_UDT = 'DEFAULT' /* O el valor por defecto que manejes */
+    L_KEY_UDT = 'DEFAULT' 
+
+
+l_log = SET_LOG('Key pais UDT: ' || L_KEY_UDT)
 
 
 
-l_log = SET_LOG('Key UDT: ' || L_KEY_UDT)
+/*============================================================================
+  PROMEDIO UDT
+============================================================================*/
+L_UDT_PROM = TO_NUMBER(GET_TABLE_VALUE('GB_CMP_LAC_LAS_INCREMENTO_MERITO', 'Incremento_Promedio', L_KEY_UDT))
 
-/************************** OBTENER VALOR DE UDT ****************************/
-L_VALOR_RAW = GET_TABLE_VALUE('GB_CMP_LAC_LAS_INC_PLAN_SALARIAL', 'Valor_Inc_Plan_Salarial', L_KEY_UDT)
+l_log = SET_LOG('Promedio UDT: ' || TO_CHAR(L_UDT_PROM))
 
-l_log = SET_LOG('Valor UDT RAW: ' || L_VALOR_RAW)
-
-/* VALIDACION TEXTO VACIO */
-IF L_VALOR_RAW = ' ' THEN
-(
-    l_log = SET_LOG('Valor vacio, retorna 0')
-    L_DEFAULT_VALUE = 0
-    RETURN L_DEFAULT_VALUE
-)
-
-/* CONVERSION */
-L_VALOR_NUM = TO_NUMBER(L_VALOR_RAW)
-
-l_log = SET_LOG('Valor Num: ' || TO_CHAR(L_VALOR_NUM))
-
-/* VALIDACIONES */
-IF L_VALOR_NUM < 0 OR L_VALOR_NUM > 100 THEN
-(
-    l_log = SET_LOG('Valor fuera de rango [0-100], retorna 0')
-    L_DEFAULT_VALUE = 0
-    RETURN L_DEFAULT_VALUE
-)
-
-/* RESULTADO FINAL */
-L_DEFAULT_VALUE = L_VALOR_NUM
-l_log = SET_LOG('*** RESULTADO GB_CMP_INC_PLAN_SALARIAL_PCT_R1: ' || TO_CHAR(L_DEFAULT_VALUE) || ' ***')
-RETURN L_DEFAULT_VALUE
+/*============================================================================
+  RESULTADO
+============================================================================*/
+l_log = SET_LOG('*** RESULTADO PROMEDIO UDT: ' || TO_CHAR(L_UDT_PROM) || ' ***')
+RETURN L_UDT_PROM
