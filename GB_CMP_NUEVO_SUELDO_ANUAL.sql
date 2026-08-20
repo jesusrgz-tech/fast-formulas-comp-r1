@@ -1,0 +1,93 @@
+/**********************************************************************
+FORMULA NAME      : GB_CMP_NUEVO_SUELDO_ANUAL
+CREATED_BY        : IT-GLOBAL
+CREATION_DATE     : 20 de Agosto del 2026
+LAST_UPDATE_DATE  : 20 de Agosto del 2026
+FORMULA TYPE      : Compensation Default and Override
+DESCRIPTION       : Calcula el Nuevo Sueldo Anual para Mexico.
+                    Lee el porcentaje de incremento de datos externos
+                    (CMP_MERITO_INCRE), calcula Incremento Mensual,
+                    y aplica redondeo a terminaciones .00, .33, .67.
+**********************************************************************/
+
+INPUTS ARE CMP_IV_PLAN_START_DATE (text),
+CMP_IV_PLAN_END_DATE (text),
+CMP_IVR_ASSIGNMENT_ID (NUMBER_NUMBER),
+CMP_IV_PLAN_EXTRACTION_DATE (text)
+
+DEFAULT FOR CMP_ASSIGNMENT_SALARY_AMOUNT IS 0
+DEFAULT_DATA_VALUE FOR CMP_EXTERNAL_WORKER_DATA_RGE_ASG_VALUE1 IS 'N/A'
+DEFAULT_DATA_VALUE FOR CMP_EXTERNAL_WORKER_DATA_RGE_ASG_SEQUENCE_NUMBER IS 0
+DEFAULT_DATA_VALUE FOR CMP_EXTERNAL_WORKER_DATA_RGE_ASG_ASSIGNMENT_ID IS 0
+
+HR_EXTRACT_DATE = TO_DATE(CMP_IV_PLAN_EXTRACTION_DATE, 'YYYY/MM/DD')
+
+l_log = SET_LOG('*** INICIO GB_CMP_NUEVO_SUELDO_ANUAL_MX ***')
+
+L_ASG_ID = CMP_IVR_ASSIGNMENT_ID[1]
+l_log = SET_LOG('Assignment ID: ' || TO_CHAR(L_ASG_ID))
+
+/***** PORCENTAJE DE INCREMENTO (datos externos) *****/
+L_PCT = 0
+L_IDX = 0
+
+CHANGE_CONTEXTS(EFFECTIVE_DATE = HR_EXTRACT_DATE, COMPENSATION_RECORD_TYPE = 'CMP_MERITO_INCRE')
+(
+    L_IDX = CMP_EXTERNAL_WORKER_DATA_RGE_ASG_SEQUENCE_NUMBER.LAST(-1)
+    l_log = SET_LOG('Registros CMP_MERITO_INCRE: ' || TO_CHAR(L_IDX))
+
+    WHILE L_IDX >= 1 LOOP
+    (
+        L_EXT_VAL = CMP_EXTERNAL_WORKER_DATA_RGE_ASG_VALUE1[L_IDX]
+        IF L_EXT_VAL <> 'N/A' THEN
+        (
+            L_PCT = TO_NUM(L_EXT_VAL)
+            L_IDX = 0
+        )
+        ELSE
+            L_IDX = L_IDX - 1
+    )
+)
+
+l_log = SET_LOG('Porcentaje incremento: ' || TO_CHAR(L_PCT))
+
+/***** SUELDO *****/
+CHANGE_CONTEXTS(EFFECTIVE_DATE = HR_EXTRACT_DATE)
+(
+    L_SUELDO_DIARIO = CMP_ASSIGNMENT_SALARY_AMOUNT
+)
+
+L_SUELDO_MENSUAL = L_SUELDO_DIARIO * 30
+L_SUELDO_ANUAL = L_SUELDO_MENSUAL * 12
+
+l_log = SET_LOG('Sueldo diario: ' || TO_CHAR(L_SUELDO_DIARIO))
+l_log = SET_LOG('Sueldo mensual: ' || TO_CHAR(L_SUELDO_MENSUAL))
+l_log = SET_LOG('Sueldo anual: ' || TO_CHAR(L_SUELDO_ANUAL))
+
+/***** CALCULO NUEVO SUELDO ANUAL *****/
+L_INCR_MENSUAL = (L_PCT / 100) * L_SUELDO_MENSUAL
+L_NUEVO_ANUAL = (L_INCR_MENSUAL * 12) + L_SUELDO_ANUAL
+
+l_log = SET_LOG('Incremento mensual: ' || TO_CHAR(L_INCR_MENSUAL))
+l_log = SET_LOG('Nuevo sueldo anual (sin redondeo): ' || TO_CHAR(L_NUEVO_ANUAL))
+
+/***** REDONDEO A TERMINACIONES .00 / .33 / .67 *****/
+L_ENTERO = TRUNC(L_NUEVO_ANUAL)
+L_DECIMAL = L_NUEVO_ANUAL - L_ENTERO
+
+IF L_DECIMAL < 0.165 THEN
+    L_NUEVO_ANUAL = L_ENTERO
+ELSE IF L_DECIMAL >= 0.165 AND L_DECIMAL < 0.50 THEN
+    L_NUEVO_ANUAL = L_ENTERO + 0.33
+ELSE IF L_DECIMAL >= 0.50 AND L_DECIMAL < 0.835 THEN
+    L_NUEVO_ANUAL = L_ENTERO + 0.67
+ELSE
+    L_NUEVO_ANUAL = L_ENTERO + 1
+
+l_log = SET_LOG('Nuevo sueldo anual (redondeado): ' || TO_CHAR(L_NUEVO_ANUAL))
+
+/***** RESULTADO *****/
+L_DEFAULT_VALUE = L_NUEVO_ANUAL
+
+l_log = SET_LOG('*** RESULTADO NUEVO SUELDO ANUAL: ' || TO_CHAR(L_DEFAULT_VALUE) || ' ***')
+RETURN L_DEFAULT_VALUE
