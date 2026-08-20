@@ -45,7 +45,7 @@ L_LATEST_REHIRE_DATE = PER_PER_LATEST_REHIRE_DATE
 
 l_log = SET_LOG('Assignment Start Date: ' || TO_CHAR(L_HIRE_DATE, 'YYYY/MM/DD'))
 l_log = SET_LOG('Original Date of Hire: ' || TO_CHAR(L_ORIGINAL_HIRE_DATE, 'YYYY/MM/DD'))
-l_log = SET_LOG('Latest Rehire Date: ' || TO_CHAR(L_LATEST_REHIRE_DATE, 'YYYY/MM/DD'))
+l_log = SET_LOG('Last Rehire Date: ' || TO_CHAR(L_LATEST_REHIRE_DATE, 'YYYY/MM/DD'))
 
 /*============================================================================
   VENTANA DE 5 MESES ANTES DEL CIERRE DEL PLAN
