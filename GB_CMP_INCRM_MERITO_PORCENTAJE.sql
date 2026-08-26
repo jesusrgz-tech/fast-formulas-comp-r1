@@ -46,17 +46,27 @@ IF L_LEGAL_EMPLOYER = 'Bimbo de Colombia, S.A.' THEN
     L_KEY_UDT = 'CO'
 ELSE IF L_LEGAL_EMPLOYER = 'Bimbo Ecuador S.A.' THEN
     L_KEY_UDT = 'EC'
-ELSE IF L_LEGAL_EMPLOYER = 'Bimbo de Costa Rica, S.A.' THEN
+ELSE IF 
+    L_LEGAL_EMPLOYER = 'Bimbo de Costa Rica, S.A.' 
+    OR L_LEGAL_EMPLOYER = 'Centro de Servicios Compartidos Bimbo, S.A.' THEN
     L_KEY_UDT = 'CR'
-ELSE IF L_LEGAL_EMPLOYER = 'Barcel De El Salvador, S.A. de C.V.' OR L_LEGAL_EMPLOYER = 'Bimbo de El Salvador, S.A. de C.V.' THEN
+ELSE IF 
+    L_LEGAL_EMPLOYER = 'Barcel De El Salvador, S.A. de C.V.' 
+    OR L_LEGAL_EMPLOYER = 'Bimbo de El Salvador, S.A. de C.V.' THEN
     L_KEY_UDT = 'SV'
-ELSE IF L_LEGAL_EMPLOYER = 'Bimbo de Centroamerica, S.A.' OR L_LEGAL_EMPLOYER = 'VeCentral, S.A.' OR L_LEGAL_EMPLOYER = 'Centro de Servicios Compartidos Bimbo, S.A.' THEN
+ELSE IF 
+    L_LEGAL_EMPLOYER = 'Bimbo de Centroamerica, S.A.' 
+    OR L_LEGAL_EMPLOYER = 'VeCentral, S.A.'  THEN
     L_KEY_UDT = 'GT'
-ELSE IF L_LEGAL_EMPLOYER = 'Bimbo de Honduras, S.A. de C.V.' OR L_LEGAL_EMPLOYER = 'Compañía Industrial Lido Pozuelo, S.A. de C.V.' THEN
+ELSE IF 
+    L_LEGAL_EMPLOYER = 'Bimbo de Honduras, S.A. de C.V.' 
+    OR L_LEGAL_EMPLOYER = 'Compañía Industrial Lido Pozuelo, S.A. de C.V.' THEN
     L_KEY_UDT = 'HN'
 ELSE IF L_LEGAL_EMPLOYER = 'Panificadora Bimbo del Uruguay Sociedad Anonima' THEN
     L_KEY_UDT = 'UY'
-ELSE IF L_LEGAL_EMPLOYER = 'Bimbo de Panama, S.A.' OR L_LEGAL_EMPLOYER = 'Nutriamericas S.A.' THEN
+ELSE IF 
+    L_LEGAL_EMPLOYER = 'Bimbo de Panama, S.A.' 
+    OR L_LEGAL_EMPLOYER = 'Nutriamericas S.A.' THEN
     L_KEY_UDT = 'PA'
 ELSE IF L_LEGAL_EMPLOYER = 'Compañia de Alimentos Fargo, S.A.' THEN
     L_KEY_UDT = 'AR'
@@ -68,11 +78,17 @@ ELSE IF L_LEGAL_EMPLOYER = 'Panificadora Bimbo del Peru, S.A.' THEN
     L_KEY_UDT = 'PE'
 ELSE IF L_LEGAL_EMPLOYER = 'Bimbo de Nicaragua, S.A.' THEN
     L_KEY_UDT = 'NI'
-ELSE IF L_LEGAL_EMPLOYER = 'Barcel, S.A. de C.V.' OR L_LEGAL_EMPLOYER = 'Bimbonet Servicios, S.A.P.I. de C.V.' OR L_LEGAL_EMPLOYER = 'Bimbo, S.A. de C.V.' OR L_LEGAL_EMPLOYER = 'Corporativo Bimbo, S.A. de C.V.' OR L_LEGAL_EMPLOYER = 'Moldes y Exhibidores, S.A. de C.V.' OR L_LEGAL_EMPLOYER = 'Tradicion en Pastelerías, S.A. de C.V.' THEN
+ELSE IF             
+        L_LEGAL_EMPLOYER = 'Barcel, S.A. de C.V.' 
+        OR L_LEGAL_EMPLOYER = 'Bimbonet Servicios, S.A.P.I. de C.V.' 
+        OR L_LEGAL_EMPLOYER = 'Bimbo, S.A. de C.V.' 
+        OR L_LEGAL_EMPLOYER = 'Corporativo Bimbo, S.A. de C.V.' 
+        OR L_LEGAL_EMPLOYER = 'Moldes y Exhibidores, S.A. de C.V.' 
+        OR L_LEGAL_EMPLOYER = 'Grupo Bimbo, S.A.B. de C.V.'
+        OR L_LEGAL_EMPLOYER = 'Tradicion en Pastelerías, S.A. de C.V.' THEN
     L_KEY_UDT = 'MEX'
 ELSE
-    L_KEY_UDT = 'DEFAULT' 
-
+    L_KEY_UDT = 'DEFAULT'
 
 l_log = SET_LOG('Key pais UDT: ' || L_KEY_UDT)
 
