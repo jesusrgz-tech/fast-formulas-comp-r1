@@ -126,6 +126,8 @@ ELSE IF L_PLAN_NAME = 'PYBPY Incremento por Mérito Final R1' THEN
     L_KEY_PAIS = 'PY'
 )
 ELSE
+
+
 (
     l_log = SET_LOG('ERROR: Plan Name no reconocido: ' || L_PLAN_NAME)
     L_KEY_PAIS = 'N/A'
