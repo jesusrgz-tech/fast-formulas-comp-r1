@@ -143,7 +143,7 @@ IF L_KEY_UDT = 'CO' OR L_KEY_UDT = 'EC' OR L_KEY_UDT = 'AR' OR L_KEY_UDT = 'PE' 
 )
 ELSE
 (
-    L_SUELDO  = L_SUELDO * 30.4168
+    L_SUELDO  = L_SUELDO * 30
 )
 
 l_log = SET_LOG('Sueldo normalizado: ' || TO_CHAR(L_SUELDO))
