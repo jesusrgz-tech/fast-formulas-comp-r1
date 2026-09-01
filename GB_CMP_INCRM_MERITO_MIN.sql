@@ -16,7 +16,7 @@
 *-----------------+-----------------+-----+-----------------------------------*
 * IT Global       | 15-Abril-2026   |  1  | Version Inicial                   *
 * IT Global       | 21-Abril-2026   |  2  | Reestructura dinamica UDT         *
-* IT Global       | 14-Mayo-2026    |  3  | Replica logica retrofit promotion *
+* IT Global       | 01-Sept-2026    |  3  | Replica logica retrofit promotion *
 *                 |                 |     | por recorrido historico de nivel  *
 ******************************************************************************/
 
@@ -52,14 +52,28 @@ L_ASG_ID = CMP_IVR_ASSIGNMENT_ID[1]
 l_log = SET_LOG('Assignment ID: ' || TO_CHAR(L_ASG_ID))
 
 /*============================================================================
-  PROMEDIO E INFLACION BR
-  Se obtienen el incremento promedio y la inflacion minima desde la UDT
-  GB_INCREMENTO_MERITO_V2 para la clave BR
+  PROMEDIO E INCREMENTO LEGAL BR
+  Se obtiene el incremento promedio y el incremento legal desde la UDT
+  GB_INCREMENTO_MERITO_V2 para la clave BR. Se calculan tambien los
+  umbrales de comparacion Minimo Rango 1 y Mitad de Incremento Promedio,
+  mismo patron ya validado en GB_CMP_INCRM_MERITO_RANGO_R1 (Colombia).
 ============================================================================*/
-L_PROM      = TO_NUMBER(GET_TABLE_VALUE('GB_INCREMENTO_MERITO_V2', 'Incremento_Promedio', 'BR'))
-L_INFLACION = TO_NUMBER(GET_TABLE_VALUE('GB_INCREMENTO_MERITO_V2', 'Inflacion_Minima', 'BR'))
-l_log = SET_LOG('Promedio BR: '  || TO_CHAR(L_PROM))
-l_log = SET_LOG('Inflacion BR: ' || TO_CHAR(L_INFLACION))
+L_PROM       = TO_NUMBER(GET_TABLE_VALUE('GB_INCREMENTO_MERITO_V2', 'Incremento_Promedio', 'BR'))
+L_INCR_LEGAL = TO_NUMBER(GET_TABLE_VALUE('GB_INCREMENTO_MERITO_V2', 'Incremento_Legal', 'BR'))
+l_log = SET_LOG('Promedio BR: '        || TO_CHAR(L_PROM))
+l_log = SET_LOG('Incremento Legal BR: ' || TO_CHAR(L_INCR_LEGAL))
+
+IF L_PROM > 10 THEN
+    L_MIN_R1 = L_PROM - 3
+ELSE IF L_PROM >= 5 AND L_PROM <= 10 THEN
+    L_MIN_R1 = L_PROM * 0.70
+ELSE
+    L_MIN_R1 = L_PROM - 1.5
+
+L_MITAD_PROM = L_PROM / 2
+
+l_log = SET_LOG('Minimo Rango 1 BR: ' || TO_CHAR(L_MIN_R1))
+l_log = SET_LOG('Mitad Incremento Promedio BR: ' || TO_CHAR(L_MITAD_PROM))
 
 /*============================================================================
   EVALUACION
@@ -242,40 +256,92 @@ ELSE
 l_log = SET_LOG('Condicion: ' || L_CONDICION)
 
 /*============================================================================
-  CONSTRUCCION DE CLAVE UDT
-  Se construye la clave dinamica que se usara para consultar
-  GB_CMP_RANGOS_MERITO segun condicion, evaluacion y apertura
+    CONSTRUCCION DE CLAVE UDT
+    Mismo alcance que Colombia (R1): todas las condiciones excepto
+    Promotion y Salida comparan Incremento Legal contra el umbral
+    correspondiente (Minimo Rango 1 o Mitad de Incremento Promedio) y
+    sufijan L_CLAVE con el resultado. Debe coincidir exactamente con la
+    clave construida en GB_CMP_INCRM_MERITO_RANGO y GB_CMP_INCRM_MERITO_MAX.
 ============================================================================*/
 IF L_CONDICION = 'Promotion' THEN
     L_CLAVE = 'Promotion'
 ELSE IF L_CONDICION = 'NonPerm' THEN
-    L_CLAVE = 'NonPerm'
+(
+    IF L_INCR_LEGAL > L_MIN_R1 THEN
+        L_CLAVE = 'NonPerm_GE_MINR1'
+    ELSE
+        L_CLAVE = 'NonPerm_LT_MINR1'
+)
 ELSE IF L_CONDICION = 'NewHire' THEN
-    L_CLAVE = 'NewHire'
+(
+    IF L_INCR_LEGAL > L_MIN_R1 THEN
+        L_CLAVE = 'NewHire_GE_MINR1'
+    ELSE
+        L_CLAVE = 'NewHire_LT_MINR1'
+)
 ELSE IF L_EVAL_TXT = 'N/A' THEN
-    L_CLAVE = 'SinEval'
+(
+    IF L_INCR_LEGAL > L_MIN_R1 THEN
+        L_CLAVE = 'SinEval_GE_MINR1'
+    ELSE
+        L_CLAVE = 'SinEval_LT_MINR1'
+)
 ELSE IF L_EVAL_TXT = 'Salida' THEN
     L_CLAVE = 'Salida'
 ELSE IF L_EVAL_TXT = 'Necesita Mejora' THEN
-    L_CLAVE = 'Necesita Mejora'
+(
+    IF L_INCR_LEGAL > L_MITAD_PROM THEN
+        L_CLAVE = 'Necesita Mejora_GE_MITADPROM'
+    ELSE
+        L_CLAVE = 'Necesita Mejora_LT_MITADPROM'
+)
 ELSE IF L_EVAL_TXT = 'Por debajo de lo esperado' THEN
-    L_CLAVE = 'Por debajo de lo esperado'
-ELSE IF L_APERTURA <= 100 THEN
-    L_CLAVE = L_EVAL_TXT || '_LT100'
+(
+    IF L_INCR_LEGAL > L_MITAD_PROM THEN
+        L_CLAVE = 'Por debajo de lo esperado_GE_MITADPROM'
+    ELSE
+        L_CLAVE = 'Por debajo de lo esperado_LT_MITADPROM'
+)
+ELSE IF L_EVAL_TXT = 'Sobresaliente' AND L_APERTURA <= 100 THEN
+    L_CLAVE = 'Sobresaliente_LT100'
+ELSE IF L_EVAL_TXT = 'Sobresaliente' AND L_APERTURA > 100 THEN
+(
+    IF L_INCR_LEGAL > L_MIN_R1 THEN
+        L_CLAVE = 'Sobresaliente_GE100_GE_MINR1'
+    ELSE
+        L_CLAVE = 'Sobresaliente_GE100_LT_MINR1'
+)
+ELSE IF L_EVAL_TXT = 'Cumple con lo esperado' AND L_APERTURA <= 100 THEN
+(
+    IF L_INCR_LEGAL > L_MIN_R1 THEN
+        L_CLAVE = 'Cumple con lo esperado_LT100_GE_MINR1'
+    ELSE
+        L_CLAVE = 'Cumple con lo esperado_LT100_LT_MINR1'
+)
+ELSE IF L_EVAL_TXT = 'Cumple con lo esperado' AND L_APERTURA > 100 THEN
+(
+    IF L_INCR_LEGAL > L_MIN_R1 THEN
+        L_CLAVE = 'Cumple con lo esperado_GE100_GE_MINR1'
+    ELSE
+        L_CLAVE = 'Cumple con lo esperado_GE100_LT_MINR1'
+)
+ELSE IF L_EVAL_TXT = 'Supera' AND L_APERTURA <= 100 THEN
+    L_CLAVE = 'Supera_LT100'
+ELSE IF L_EVAL_TXT = 'Supera' AND L_APERTURA > 100 THEN
+    L_CLAVE = 'Supera_GE100'
 ELSE
-    L_CLAVE = L_EVAL_TXT || '_GE100'
+    L_CLAVE = 'SinClasificar'
 
 l_log = SET_LOG('Clave UDT: ' || L_CLAVE)
+
 
 /*============================================================================
   LECTURA UDT
   Se obtiene el indicador Rango_Min y la bandera Aplica_Inflacion
   desde GB_CMP_RANGOS_MERITO usando la clave construida
 ============================================================================*/
-L_RANGO_MIN  = GET_TABLE_VALUE('GB_CMP_RANGOS_MERITO', 'Rango_Minimo', L_CLAVE)
-L_APLICA_INF = GET_TABLE_VALUE('GB_CMP_RANGOS_MERITO', 'Aplica_Inflacion', L_CLAVE)
-l_log = SET_LOG('Rango Min: '        || L_RANGO_MIN)
-l_log = SET_LOG('Aplica Inflacion: ' || L_APLICA_INF)
+L_RANGO_MIN = GET_TABLE_VALUE('GB_CMP_RANGOS_MERITO' , 'Rango_Min', L_CLAVE)
+l_log = SET_LOG('Rango Min: ' || L_RANGO_MIN)
 
 /*============================================================================
   CALCULO VALORES NUMERICOS POR RANGO
@@ -283,40 +349,56 @@ l_log = SET_LOG('Aplica Inflacion: ' || L_APLICA_INF)
 ============================================================================*/
 IF L_PROM > 10 THEN
 (
-    L_VAL_R1 = L_PROM - 3
-    L_VAL_R2 = L_PROM - 1.5
-    L_VAL_R3 = L_PROM
-    L_VAL_R4 = L_PROM + 1.5
+    L_VAL_R1_MIN = L_PROM - 3
+    L_VAL_R2_MIN = L_PROM - 1.5
+    L_VAL_R3_MIN = L_PROM
+    L_VAL_R4_MIN = L_PROM + 1.5
+    L_VAL_R1 = L_PROM - 1.5
+    L_VAL_R2 = L_PROM
+    L_VAL_R3 = L_PROM + 1.5
+    L_VAL_R4 = L_PROM + 3
 )
 ELSE IF L_PROM >= 5 AND L_PROM <= 10 THEN
 (
-    L_VAL_R1 = L_PROM * 0.70
-    L_VAL_R2 = L_PROM * 0.85
-    L_VAL_R3 = L_PROM
-    L_VAL_R4 = L_PROM * 1.15
+    L_VAL_R1_MIN = L_PROM * 0.70
+    L_VAL_R2_MIN = L_PROM * 0.85
+    L_VAL_R3_MIN = L_PROM
+    L_VAL_R4_MIN = L_PROM * 1.15
+    L_VAL_R1 = L_PROM * 0.85
+    L_VAL_R2 = L_PROM
+    L_VAL_R3 = L_PROM * 1.15
+    L_VAL_R4 = L_PROM * 1.30
 )
 ELSE
 (
-    L_VAL_R1 = L_PROM - 1.5
-    L_VAL_R2 = L_PROM - 0.75
-    L_VAL_R3 = L_PROM
-    L_VAL_R4 = L_PROM + 0.75
+    L_VAL_R1_MIN = L_PROM - 1.5
+    L_VAL_R2_MIN = L_PROM - 0.75
+    L_VAL_R3_MIN = L_PROM
+    L_VAL_R4_MIN = L_PROM + 0.75
+    L_VAL_R1 = L_PROM - 0.75
+    L_VAL_R2 = L_PROM
+    L_VAL_R3 = L_PROM + 0.75
+    L_VAL_R4 = L_PROM + 1.5
 )
-
-l_log = SET_LOG('Val R1: ' || TO_CHAR(L_VAL_R1))
-l_log = SET_LOG('Val R2: ' || TO_CHAR(L_VAL_R2))
-l_log = SET_LOG('Val R3: ' || TO_CHAR(L_VAL_R3))
-l_log = SET_LOG('Val R4: ' || TO_CHAR(L_VAL_R4))
-
+l_log = SET_LOG('Val R1_MIN: ' || TO_CHAR(L_VAL_R1_MIN))
+l_log = SET_LOG('Val R2_MIN: ' || TO_CHAR(L_VAL_R2_MIN))
+l_log = SET_LOG('Val R3_MIN: ' || TO_CHAR(L_VAL_R3_MIN))
+l_log = SET_LOG('Val R4_MIN: ' || TO_CHAR(L_VAL_R4_MIN))
 /*============================================================================
   RESOLUCION NUMERICA MINIMO
   Se traduce el indicador Rango_Min a su valor numerico correspondiente
 ============================================================================*/
 IF L_RANGO_MIN = 'NO' THEN
     L_DEFAULT_MIN = 0
-ELSE IF L_RANGO_MIN = 'R1' THEN
-    L_DEFAULT_MIN = L_VAL_R1
 ELSE IF L_RANGO_MIN = 'R1_MIN' THEN
+    L_DEFAULT_MIN = L_VAL_R1_MIN
+ELSE IF L_RANGO_MIN = 'R2_MIN' THEN
+    L_DEFAULT_MIN = L_VAL_R2_MIN
+ELSE IF L_RANGO_MIN = 'R3_MIN' THEN
+    L_DEFAULT_MIN = L_VAL_R3_MIN
+ELSE IF L_RANGO_MIN = 'R4_MIN' THEN
+    L_DEFAULT_MIN = L_VAL_R4_MIN
+ELSE IF L_RANGO_MIN = 'R1' THEN
     L_DEFAULT_MIN = L_VAL_R1
 ELSE IF L_RANGO_MIN = 'R2' THEN
     L_DEFAULT_MIN = L_VAL_R2
@@ -328,16 +410,11 @@ ELSE IF L_RANGO_MIN = 'PROM' THEN
     L_DEFAULT_MIN = L_PROM
 ELSE IF L_RANGO_MIN = 'MITAD' THEN
     L_DEFAULT_MIN = L_PROM / 2
+ELSE IF L_RANGO_MIN = 'INC_LG' THEN
+    L_DEFAULT_MIN = L_INCR_LEGAL
 ELSE
     L_DEFAULT_MIN = 0
 
-/*============================================================================
-  APLICAR INFLACION MINIMA
-  Si Aplica_Inflacion = S y el minimo calculado es menor a la inflacion
-  anual, se sustituye por el valor de inflacion
-============================================================================*/
-IF L_APLICA_INF = 'S' AND L_DEFAULT_MIN < L_INFLACION THEN
-    L_DEFAULT_MIN = L_INFLACION
 
 l_log = SET_LOG('*** RESULTADO MIN: ' || TO_CHAR(L_DEFAULT_MIN) || ' ***')
 RETURN L_DEFAULT_MIN
