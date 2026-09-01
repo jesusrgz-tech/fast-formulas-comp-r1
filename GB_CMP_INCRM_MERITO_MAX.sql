@@ -342,8 +342,6 @@ ELSE
     L_DEFAULT_MAX = 0
 
 
-
-
 /*============================================================================
   APLICAR INFLACION MINIMA
   Si Aplica_Inflacion = S y el maximo calculado es menor a la inflacion

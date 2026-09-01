@@ -6,10 +6,18 @@
 *                     La deteccion de Promotion se realiza mediante          *
 *                     recorrido historico de PER_ASG_JOB_MANAGER_LEVEL        *
 *                     dentro de la ventana de 5 meses previa al fin del plan *
+*                     Condiciones A (Salida), B (Necesita Mejora / Por       *
+*                     debajo de lo esperado) e I (SinEval) comparan          *
+*                     Incremento_Legal (columna de GB_INCREMENTO_MERITO_V2,  *
+*                     antes Inflacion_Minima) contra Minimo Rango 1 o Mitad  *
+*                     de Incremento Promedio segun corresponda, y sufijan    *
+*                     L_CLAVE con el resultado. La elegibilidad de Nivel 5+  *
+*                     ya se valida en GB_CMP_ELEGIBILIDAD_BR aguas arriba,   *
+*                     por lo que esta formula no repite ese gate.           *
 *-----------------------------------------------------------------------------*
 * CREATED BY        : IT-GLOBAL                                               *
 * CREATION DATE     : 07-Abril-2026                                           *
-* LAST UPDATE DATE  : 14-Mayo-2026                                            *
+* LAST UPDATE DATE  : 01-Septiembre-2026                                      *
 *-----------------------------------------------------------------------------*
 * Change History:                                                             *
 * Author          | Date            | Ver | Comments                          *
@@ -18,6 +26,11 @@
 * IT Global       | 21-Abril-2026   |  2  | Reestructura dinamica UDT         *
 * IT Global       | 14-Mayo-2026    |  3  | Replica logica retrofit promotion *
 *                 |                 |     | por recorrido historico de nivel  *
+* IT Global       | 01-Sept-2026    |  4  | Incremento Legal BR: comparacion  *
+*                 |                 |     | en A/B/I contra Incremento_Legal  *
+*                 |                 |     | (GB_INCREMENTO_MERITO_V2).        *
+*                 |                 |     | Salida vs 0 PENDIENTE DE VALIDAR  *
+*                 |                 |     | con funcionales.                  *
 ******************************************************************************/
 
 INPUTS ARE CMP_IV_PLAN_START_DATE (text),
@@ -58,6 +71,28 @@ l_log = SET_LOG('Assignment ID: ' || TO_CHAR(L_ASG_ID))
 ============================================================================*/
 L_PROM = TO_NUMBER(GET_TABLE_VALUE('GB_INCREMENTO_MERITO_V2', 'Incremento_Promedio', 'BR'))
 l_log = SET_LOG('Promedio BR: ' || TO_CHAR(L_PROM))
+
+/*============================================================================
+  INCREMENTO LEGAL BR
+  Se obtiene desde GB_INCREMENTO_MERITO_V2, columna Incremento_Legal
+  (antes Inflacion_Minima). Se calculan tambien los umbrales de
+  comparacion Minimo Rango 1 y Mitad de Incremento Promedio, mismo
+  patron ya validado en GB_CMP_INCRM_MERITO_RANGO_R1.
+============================================================================*/
+L_INCR_LEGAL = TO_NUMBER(GET_TABLE_VALUE('GB_INCREMENTO_MERITO_V2', 'Incremento_Legal', 'BR'))
+l_log = SET_LOG('Incremento Legal BR: ' || TO_CHAR(L_INCR_LEGAL))
+
+IF L_PROM > 10 THEN
+    L_MIN_R1 = L_PROM - 3
+ELSE IF L_PROM >= 5 AND L_PROM <= 10 THEN
+    L_MIN_R1 = L_PROM * 0.70
+ELSE
+    L_MIN_R1 = L_PROM - 1.5
+
+L_MITAD_PROM = L_PROM / 2
+
+l_log = SET_LOG('Minimo Rango 1 BR: ' || TO_CHAR(L_MIN_R1))
+l_log = SET_LOG('Mitad Incremento Promedio BR: ' || TO_CHAR(L_MITAD_PROM))
 
 /*============================================================================
   EVALUACION
@@ -242,7 +277,11 @@ l_log = SET_LOG('Condicion: ' || L_CONDICION)
 /*============================================================================
   CONSTRUCCION DE CLAVE UDT
   Se construye la clave dinamica que se usara para consultar
-  GB_CMP_RANGOS_MERITO segun condicion, evaluacion y apertura
+  GB_CMP_RANGOS_MERITO segun condicion, evaluacion y apertura.
+  Condiciones A (Salida), B (Necesita Mejora / Por debajo de lo
+  esperado) e I (SinEval) comparan Incremento Legal contra el umbral
+  correspondiente y sufijan la clave con el resultado. C, D, E, F, G, H
+  no cambian respecto a la version anterior.
 ============================================================================*/
 IF L_CONDICION = 'Promotion' THEN
     L_CLAVE = 'Promotion'
@@ -251,13 +290,30 @@ ELSE IF L_CONDICION = 'NonPerm' THEN
 ELSE IF L_CONDICION = 'NewHire' THEN
     L_CLAVE = 'NewHire'
 ELSE IF L_EVAL_TXT = 'N/A' THEN
-    L_CLAVE = 'SinEval'
+(
+    IF L_INCR_LEGAL > L_MIN_R1 THEN
+        L_CLAVE = 'SinEval_GE_MINR1'
+    ELSE
+        L_CLAVE = 'SinEval_LT_MINR1'
+)
 ELSE IF L_EVAL_TXT = 'Salida' THEN
+(
     L_CLAVE = 'Salida'
+)
 ELSE IF L_EVAL_TXT = 'Necesita Mejora' THEN
-    L_CLAVE = 'Necesita Mejora'
+(
+    IF L_INCR_LEGAL > L_MITAD_PROM THEN
+        L_CLAVE = 'Necesita Mejora_GE_MITADPROM'
+    ELSE
+        L_CLAVE = 'Necesita Mejora_LT_MITADPROM'
+)
 ELSE IF L_EVAL_TXT = 'Por debajo de lo esperado' THEN
-    L_CLAVE = 'Por debajo de lo esperado'
+(
+    IF L_INCR_LEGAL > L_MITAD_PROM THEN
+        L_CLAVE = 'Por debajo de lo esperado_GE_MITADPROM'
+    ELSE
+        L_CLAVE = 'Por debajo de lo esperado_LT_MITADPROM'
+)
 ELSE IF L_APERTURA <= 100 THEN
     L_CLAVE = L_EVAL_TXT || '_LT100'
 ELSE
