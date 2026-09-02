@@ -174,7 +174,6 @@ ELSE
     L_MIN = TO_NUM(GET_VALUE_SET('GB_CMP_RATE_VALUE_MIN', L_PARAM_GRADE))
     L_MAX = TO_NUM(GET_VALUE_SET('GB_CMP_RATE_VALUE_MAX', L_PARAM_GRADE))
 )
-
 l_log = SET_LOG('Min plan: ' || TO_CHAR(L_MIN))
 l_log = SET_LOG('Max plan: ' || TO_CHAR(L_MAX))
 
@@ -242,13 +241,11 @@ IF ASSIGN_START_DATE >= PROMOTION_START_DATE AND ASSIGN_START_DATE <= PROMOTION_
         )
     )
 )
-
 IF LEVEL1 != 'NA' AND MGR_LVL != 'NA' THEN
 (
     IF TO_NUMBER(MGR_LVL) > TO_NUMBER(LEVEL1) THEN
         LEVEL_CHANGE = 'Y'
 )
-
 IF LEVEL_CHANGE = 'Y' THEN
     PRO = 'PRO'
 
@@ -276,19 +273,28 @@ l_log = SET_LOG('Condicion: ' || L_CONDICION)
 
 /*============================================================================
   CONSTRUCCION DE CLAVE UDT
-  Se construye la clave dinamica que se usara para consultar
-  GB_CMP_RANGOS_MERITO segun condicion, evaluacion y apertura.
-  Condiciones A (Salida), B (Necesita Mejora / Por debajo de lo
-  esperado) e I (SinEval) comparan Incremento Legal contra el umbral
-  correspondiente y sufijan la clave con el resultado. C, D, E, F, G, H
-  no cambian respecto a la version anterior.
+  Mismo alcance que Colombia (R1): todas las condiciones excepto
+  Promotion y Salida comparan Incremento Legal contra el umbral
+  correspondiente (Minimo Rango 1 o Mitad de Incremento Promedio) y
+  sufijan L_CLAVE con el resultado. Promotion y Salida quedan planas,
+  sin comparacion.
 ============================================================================*/
 IF L_CONDICION = 'Promotion' THEN
     L_CLAVE = 'Promotion'
 ELSE IF L_CONDICION = 'NonPerm' THEN
-    L_CLAVE = 'NonPerm'
+(
+    IF L_INCR_LEGAL > L_MIN_R1 THEN
+        L_CLAVE = 'NonPerm_GE_MINR1'
+    ELSE
+        L_CLAVE = 'NonPerm_LT_MINR1'
+)
 ELSE IF L_CONDICION = 'NewHire' THEN
-    L_CLAVE = 'NewHire'
+(
+    IF L_INCR_LEGAL > L_MIN_R1 THEN
+        L_CLAVE = 'NewHire_GE_MINR1'
+    ELSE
+        L_CLAVE = 'NewHire_LT_MINR1'
+)
 ELSE IF L_EVAL_TXT = 'N/A' THEN
 (
     IF L_INCR_LEGAL > L_MIN_R1 THEN
@@ -297,9 +303,7 @@ ELSE IF L_EVAL_TXT = 'N/A' THEN
         L_CLAVE = 'SinEval_LT_MINR1'
 )
 ELSE IF L_EVAL_TXT = 'Salida' THEN
-(
     L_CLAVE = 'Salida'
-)
 ELSE IF L_EVAL_TXT = 'Necesita Mejora' THEN
 (
     IF L_INCR_LEGAL > L_MITAD_PROM THEN
@@ -314,10 +318,35 @@ ELSE IF L_EVAL_TXT = 'Por debajo de lo esperado' THEN
     ELSE
         L_CLAVE = 'Por debajo de lo esperado_LT_MITADPROM'
 )
-ELSE IF L_APERTURA <= 100 THEN
-    L_CLAVE = L_EVAL_TXT || '_LT100'
+ELSE IF L_EVAL_TXT = 'Sobresaliente' AND L_APERTURA <= 100 THEN
+    L_CLAVE = 'Sobresaliente_LT100'
+ELSE IF L_EVAL_TXT = 'Sobresaliente' AND L_APERTURA > 100 THEN
+(
+    IF L_INCR_LEGAL > L_MIN_R1 THEN
+        L_CLAVE = 'Sobresaliente_GE100_GE_MINR1'
+    ELSE
+        L_CLAVE = 'Sobresaliente_GE100_LT_MINR1'
+)
+ELSE IF L_EVAL_TXT = 'Cumple con lo esperado' AND L_APERTURA <= 100 THEN
+(
+    IF L_INCR_LEGAL > L_MIN_R1 THEN
+        L_CLAVE = 'Cumple con lo esperado_LT100_GE_MINR1'
+    ELSE
+        L_CLAVE = 'Cumple con lo esperado_LT100_LT_MINR1'
+)
+ELSE IF L_EVAL_TXT = 'Cumple con lo esperado' AND L_APERTURA > 100 THEN
+(
+    IF L_INCR_LEGAL > L_MIN_R1 THEN
+        L_CLAVE = 'Cumple con lo esperado_GE100_GE_MINR1'
+    ELSE
+        L_CLAVE = 'Cumple con lo esperado_GE100_LT_MINR1'
+)
+ELSE IF L_EVAL_TXT = 'Supera' AND L_APERTURA <= 100 THEN
+    L_CLAVE = 'Supera_LT100'
+ELSE IF L_EVAL_TXT = 'Supera' AND L_APERTURA > 100 THEN
+    L_CLAVE = 'Supera_GE100'
 ELSE
-    L_CLAVE = L_EVAL_TXT || '_GE100'
+    L_CLAVE = 'SinClasificar n/a'
 
 l_log = SET_LOG('Clave UDT: ' || L_CLAVE)
 
