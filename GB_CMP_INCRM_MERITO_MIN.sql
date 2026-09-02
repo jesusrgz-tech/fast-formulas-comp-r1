@@ -58,8 +58,8 @@ l_log = SET_LOG('Assignment ID: ' || TO_CHAR(L_ASG_ID))
   umbrales de comparacion Minimo Rango 1 y Mitad de Incremento Promedio,
   mismo patron ya validado en GB_CMP_INCRM_MERITO_RANGO_R1 (Colombia).
 ============================================================================*/
-L_PROM       = TO_NUMBER(GET_TABLE_VALUE('GB_INCREMENTO_MERITO_V2', 'Incremento_Promedio', 'BR'))
-L_INCR_LEGAL = TO_NUMBER(GET_TABLE_VALUE('GB_INCREMENTO_MERITO_V2', 'Incremento_Legal', 'BR'))
+L_PROM       = TO_NUMBER(GET_TABLE_VALUE('GB_CMP_BR_INCREMENTO_MERITO', 'Incremento_Promedio', 'BR'))
+L_INCR_LEGAL = TO_NUMBER(GET_TABLE_VALUE('GB_CMP_BR_INCREMENTO_MERITO', 'Incremento_Legal', 'BR'))
 l_log = SET_LOG('Promedio BR: '        || TO_CHAR(L_PROM))
 l_log = SET_LOG('Incremento Legal BR: ' || TO_CHAR(L_INCR_LEGAL))
 
@@ -263,7 +263,15 @@ l_log = SET_LOG('Condicion: ' || L_CONDICION)
     sufijan L_CLAVE con el resultado. Debe coincidir exactamente con la
     clave construida en GB_CMP_INCRM_MERITO_RANGO y GB_CMP_INCRM_MERITO_MAX.
 ============================================================================*/
-IF L_CONDICION = 'Promotion' THEN
+IF L_CONDICION = 'Promotion' AND (L_EVAL_TXT = 'Sobresaliente' OR L_EVAL_TXT = 'N/A') THEN
+    L_CLAVE = 'Sobresaliente_PROM'
+ELSE IF L_CONDICION = 'Promotion' AND (L_EVAL_TXT = 'Supera' OR L_EVAL_TXT = 'N/A') THEN 
+    L_CLAVE = 'Supera_PROM'
+ELSE IF L_CONDICION = 'Promotion' AND (L_EVAL_TXT = 'Cumple con lo esperado' OR L_EVAL_TXT = 'N/A') THEN 
+    L_CLAVE = 'Cumple con lo esperado_PROM'
+ELSE IF L_CONDICION = 'Promotion' THEN 
+    L_CLAVE = 'Promotion'
+ELSE IF L_CONDICION = 'Promotion' AND L_EVAL_TXT = 'N/A' THEN 
     L_CLAVE = 'Promotion'
 ELSE IF L_CONDICION = 'NonPerm' THEN
 (
@@ -330,17 +338,16 @@ ELSE IF L_EVAL_TXT = 'Supera' AND L_APERTURA <= 100 THEN
 ELSE IF L_EVAL_TXT = 'Supera' AND L_APERTURA > 100 THEN
     L_CLAVE = 'Supera_GE100'
 ELSE
-    L_CLAVE = 'SinClasificar'
+    L_CLAVE = 'SinClasificar n/a'
 
 l_log = SET_LOG('Clave UDT: ' || L_CLAVE)
-
 
 /*============================================================================
   LECTURA UDT
   Se obtiene el indicador Rango_Min y la bandera Aplica_Inflacion
   desde GB_CMP_RANGOS_MERITO usando la clave construida
 ============================================================================*/
-L_RANGO_MIN = GET_TABLE_VALUE('GB_CMP_RANGOS_MERITO' , 'Rango_Min', L_CLAVE)
+L_RANGO_MIN = GET_TABLE_VALUE('GB_CMP_RANGOS_MERITO' , 'Rango_Minimo', L_CLAVE)
 l_log = SET_LOG('Rango Min: ' || L_RANGO_MIN)
 
 /*============================================================================
@@ -357,6 +364,7 @@ IF L_PROM > 10 THEN
     L_VAL_R2 = L_PROM
     L_VAL_R3 = L_PROM + 1.5
     L_VAL_R4 = L_PROM + 3
+    L_VAL_R4_MAX = L_PROM + 3
 )
 ELSE IF L_PROM >= 5 AND L_PROM <= 10 THEN
 (
@@ -368,6 +376,7 @@ ELSE IF L_PROM >= 5 AND L_PROM <= 10 THEN
     L_VAL_R2 = L_PROM
     L_VAL_R3 = L_PROM * 1.15
     L_VAL_R4 = L_PROM * 1.30
+    L_VAL_R4_MAX = L_PROM * 1.30
 )
 ELSE
 (
@@ -379,7 +388,13 @@ ELSE
     L_VAL_R2 = L_PROM
     L_VAL_R3 = L_PROM + 0.75
     L_VAL_R4 = L_PROM + 1.5
+    L_VAL_R4_MAX = L_PROM + 1.5
 )
+
+l_log = SET_LOG('Val R1: ' || TO_CHAR(L_VAL_R1))
+l_log = SET_LOG('Val R2: ' || TO_CHAR(L_VAL_R2))
+l_log = SET_LOG('Val R3: ' || TO_CHAR(L_VAL_R3))
+l_log = SET_LOG('Val R4: ' || TO_CHAR(L_VAL_R4))
 l_log = SET_LOG('Val R1_MIN: ' || TO_CHAR(L_VAL_R1_MIN))
 l_log = SET_LOG('Val R2_MIN: ' || TO_CHAR(L_VAL_R2_MIN))
 l_log = SET_LOG('Val R3_MIN: ' || TO_CHAR(L_VAL_R3_MIN))
@@ -390,31 +405,36 @@ l_log = SET_LOG('Val R4_MIN: ' || TO_CHAR(L_VAL_R4_MIN))
 ============================================================================*/
 IF L_RANGO_MIN = 'NO' THEN
     L_DEFAULT_MIN = 0
-ELSE IF L_RANGO_MIN = 'R1_MIN' THEN
-    L_DEFAULT_MIN = L_VAL_R1_MIN
-ELSE IF L_RANGO_MIN = 'R2_MIN' THEN
-    L_DEFAULT_MIN = L_VAL_R2_MIN
-ELSE IF L_RANGO_MIN = 'R3_MIN' THEN
-    L_DEFAULT_MIN = L_VAL_R3_MIN
-ELSE IF L_RANGO_MIN = 'R4_MIN' THEN
-    L_DEFAULT_MIN = L_VAL_R4_MIN
-ELSE IF L_RANGO_MIN = 'R1' THEN
+ELSE IF L_RANGO_MIN = 'R0_MIN' THEN
+    L_DEFAULT_MIN = 0
+ELSE IF L_RANGO_MIN = 'R0_MAX' THEN
     L_DEFAULT_MIN = L_VAL_R1
-ELSE IF L_RANGO_MIN = 'R2' THEN
+ELSE IF L_RANGO_MIN = 'R1_MIN' OR L_RANGO_MIN = 'R1' THEN
+    L_DEFAULT_MIN = L_VAL_R1
+ELSE IF L_RANGO_MIN = 'R1_MAX' THEN
     L_DEFAULT_MIN = L_VAL_R2
-ELSE IF L_RANGO_MIN = 'R3' THEN
+ELSE IF L_RANGO_MIN = 'R2_MIN' OR L_RANGO_MIN = 'R2' THEN
+    L_DEFAULT_MIN = L_VAL_R2
+ELSE IF L_RANGO_MIN = 'R2_MAX' THEN
+    L_DEFAULT_MIN = L_VAL_R2
+ELSE IF L_RANGO_MIN = 'R3_MIN' OR L_RANGO_MIN = 'R3' THEN
     L_DEFAULT_MIN = L_VAL_R3
-ELSE IF L_RANGO_MIN = 'R4' THEN
-    L_DEFAULT_MIN = L_VAL_R4
+ELSE IF L_RANGO_MIN = 'R3_MAX' THEN
+    L_DEFAULT_MIN = L_VAL_R3 
+ELSE IF L_RANGO_MIN = 'R4_MIN' OR L_RANGO_MIN = 'R4' THEN
+    L_DEFAULT_MIN = L_VAL_R3
+ELSE IF L_RANGO_MIN = 'R4_MAX' THEN
+    L_DEFAULT_MIN = L_VAL_R4_MAX
 ELSE IF L_RANGO_MIN = 'PROM' THEN
     L_DEFAULT_MIN = L_PROM
+ELSE IF L_RANGO_MIN = 'HALF_PROM' THEN
+    L_DEFAULT_MIN = L_PROM / 2
 ELSE IF L_RANGO_MIN = 'MITAD' THEN
     L_DEFAULT_MIN = L_PROM / 2
 ELSE IF L_RANGO_MIN = 'INC_LG' THEN
     L_DEFAULT_MIN = L_INCR_LEGAL
 ELSE
     L_DEFAULT_MIN = 0
-
 
 l_log = SET_LOG('*** RESULTADO MIN: ' || TO_CHAR(L_DEFAULT_MIN) || ' ***')
 RETURN L_DEFAULT_MIN

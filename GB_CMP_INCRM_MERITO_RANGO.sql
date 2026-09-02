@@ -69,7 +69,7 @@ l_log = SET_LOG('Assignment ID: ' || TO_CHAR(L_ASG_ID))
   Se obtiene el incremento promedio desde GB_INCREMENTO_MERITO_V2
   para la clave BR
 ============================================================================*/
-L_PROM = TO_NUMBER(GET_TABLE_VALUE('GB_INCREMENTO_MERITO_V2', 'Incremento_Promedio', 'BR'))
+L_PROM = TO_NUM(GET_TABLE_VALUE('GB_CMP_BR_INCREMENTO_MERITO', 'Incremento_Legal', 'BR'))
 l_log = SET_LOG('Promedio BR: ' || TO_CHAR(L_PROM))
 
 /*============================================================================
@@ -79,7 +79,7 @@ l_log = SET_LOG('Promedio BR: ' || TO_CHAR(L_PROM))
   comparacion Minimo Rango 1 y Mitad de Incremento Promedio, mismo
   patron ya validado en GB_CMP_INCRM_MERITO_RANGO_R1.
 ============================================================================*/
-L_INCR_LEGAL = TO_NUMBER(GET_TABLE_VALUE('GB_INCREMENTO_MERITO_V2', 'Incremento_Legal', 'BR'))
+L_INCR_LEGAL = TO_NUM(GET_TABLE_VALUE('GB_CMP_BR_INCREMENTO_MERITO', 'Incremento_Promedio', 'BR'))
 l_log = SET_LOG('Incremento Legal BR: ' || TO_CHAR(L_INCR_LEGAL))
 
 IF L_PROM > 10 THEN
@@ -279,7 +279,15 @@ l_log = SET_LOG('Condicion: ' || L_CONDICION)
   sufijan L_CLAVE con el resultado. Promotion y Salida quedan planas,
   sin comparacion.
 ============================================================================*/
-IF L_CONDICION = 'Promotion' THEN
+IF L_CONDICION = 'Promotion' AND (L_EVAL_TXT = 'Sobresaliente' OR L_EVAL_TXT = 'N/A') THEN
+    L_CLAVE = 'Sobresaliente_PROM'
+ELSE IF L_CONDICION = 'Promotion' AND (L_EVAL_TXT = 'Supera' OR L_EVAL_TXT = 'N/A') THEN 
+    L_CLAVE = 'Supera_PROM'
+ELSE IF L_CONDICION = 'Promotion' AND (L_EVAL_TXT = 'Cumple con lo esperado' OR L_EVAL_TXT = 'N/A') THEN 
+    L_CLAVE = 'Cumple con lo esperado_PROM'
+ELSE IF L_CONDICION = 'Promotion' THEN 
+    L_CLAVE = 'Promotion'
+ELSE IF L_CONDICION = 'Promotion' AND L_EVAL_TXT = 'N/A' THEN 
     L_CLAVE = 'Promotion'
 ELSE IF L_CONDICION = 'NonPerm' THEN
 (
