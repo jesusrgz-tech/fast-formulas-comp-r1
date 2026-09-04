@@ -487,8 +487,7 @@ l_log = SET_LOG('Condicion: ' || L_CONDICION)
   CONSTRUCCION DE CLAVE UDT (SIN CAMBIOS) - usada por GET_TABLE_VALUE sobre
   GB_CMP_LAS_LAC_RANGOS_MERITO para todo pais con L_KEY_UDT != 'CO'
 ============================================================================*/
-IF L_CONDICION = 'Promotion' AND (L_EVAL_TXT = 'Sobresaliente' OR L_EVAL_TXT = 'Supera' OR L_EVAL_TXT = 'Cumple con lo esperado'
-OR L_EVAL_TXT = 'N/A') THEN
+IF L_CONDICION = 'Promotion' THEN
     L_CLAVE = 'Promotion'
 ELSE IF L_CONDICION = 'NonPerm' THEN
     L_CLAVE = 'NonPerm'
@@ -516,6 +515,8 @@ IF L_KEY_UDT = 'CO' THEN
 (
     IF L_CONDICION = 'Promotion' AND L_EVAL_TXT = 'Sobresaliente' THEN
         L_CLAVE_CO = 'Sobresaliente_Prom'
+    ELSE IF L_CONDICION = 'Promotion' THEN
+        L_CLAVE_CO = 'Promotion'
     ELSE IF L_CONDICION = 'NonPerm' THEN
     (
         IF L_INCR_LEGAL > L_MIN_R1_CO THEN
@@ -547,7 +548,12 @@ IF L_KEY_UDT = 'CO' THEN
             L_CLAVE_CO = L_EVAL_TXT || '_LT_MITADPROM'
     )
     ELSE IF L_EVAL_TXT = 'Sobresaliente' AND L_APERTURA < 100 THEN
-        L_CLAVE_CO = 'Sobresaliente_LT100'
+    (
+        IF L_INCR_LEGAL > L_MIN_R1_CO THEN
+            L_CLAVE_CO = 'Sobresaliente_LT100_GE_MINR1'
+        ELSE
+            L_CLAVE_CO = 'Sobresaliente_LT100_LT_MINR1'
+    )
     ELSE IF L_EVAL_TXT = 'Sobresaliente' AND L_APERTURA >= 100 THEN
     (
         IF L_INCR_LEGAL > L_MIN_R1_CO THEN
@@ -570,9 +576,19 @@ IF L_KEY_UDT = 'CO' THEN
             L_CLAVE_CO = 'Cumple con lo esperado_GE100_LT_MINR1'
     )
     ELSE IF L_EVAL_TXT = 'Supera' AND L_APERTURA < 100 THEN
-        L_CLAVE_CO = 'Supera_LT100'
+    (
+        IF L_INCR_LEGAL > L_MIN_R1_CO THEN
+            L_CLAVE_CO = 'Supera_LT100_GE_MINR1'
+        ELSE
+            L_CLAVE_CO = 'Supera_LT100_LT_MINR1'
+    )
     ELSE IF L_EVAL_TXT = 'Supera' AND L_APERTURA >= 100 THEN
-        L_CLAVE_CO = 'Supera_GE100'
+    (
+        IF L_INCR_LEGAL > L_MIN_R1_CO THEN
+            L_CLAVE_CO = 'Supera_GE100_GE_MINR1'
+        ELSE
+            L_CLAVE_CO = 'Supera_GE100_LT_MINR1'
+    )
     ELSE
         L_CLAVE_CO = 'SinClasificar'
 )
@@ -605,46 +621,50 @@ l_log = SET_LOG('Aplica Inflacion: ' || L_APLICA_INF)
 IF L_PROM > 10 THEN
 (
     L_VAL_R1_MIN = L_PROM - 3
+    L_VAL_R1_MAX = L_PROM - 1.5
     L_VAL_R2_MIN = L_PROM - 1.5
+    L_VAL_R2_MAX = L_PROM
     L_VAL_R3_MIN = L_PROM
+    L_VAL_R3_MAX = L_PROM + 1.5
     L_VAL_R4_MIN = L_PROM + 1.5
-    L_VAL_R1 = L_PROM - 1.5
-    L_VAL_R2 = L_PROM
-    L_VAL_R3 = L_PROM + 1.5
-    L_VAL_R4 = L_PROM + 3
+    L_VAL_R4_MAX = L_PROM + 3
 )
 ELSE IF L_PROM >= 5 AND L_PROM <= 10 THEN
 (
     L_VAL_R1_MIN = L_PROM * 0.70
+    L_VAL_R1_MAX = L_PROM * 0.85
     L_VAL_R2_MIN = L_PROM * 0.85
+    L_VAL_R2_MAX = L_PROM
     L_VAL_R3_MIN = L_PROM
+    L_VAL_R3_MAX = L_PROM * 1.15
     L_VAL_R4_MIN = L_PROM * 1.15
-    L_VAL_R1 = L_PROM * 0.85
-    L_VAL_R2 = L_PROM
-    L_VAL_R3 = L_PROM * 1.15
-    L_VAL_R4 = L_PROM * 1.30
+    L_VAL_R4_MAX = L_PROM * 1.30
 )
 ELSE
 (
     L_VAL_R1_MIN = L_PROM - 1.5
+    L_VAL_R1_MAX = L_PROM - 0.75
     L_VAL_R2_MIN = L_PROM - 0.75
+    L_VAL_R2_MAX = L_PROM
     L_VAL_R3_MIN = L_PROM
+    L_VAL_R3_MAX = L_PROM + 0.75
     L_VAL_R4_MIN = L_PROM + 0.75
-    L_VAL_R1 = L_PROM - 0.75
-    L_VAL_R2 = L_PROM
-    L_VAL_R3 = L_PROM + 0.75
-    L_VAL_R4 = L_PROM + 1.5
+    L_VAL_R4_MAX = L_PROM + 1.5
 )
 
-l_log = SET_LOG('Val R1: ' || TO_CHAR(L_VAL_R1))
-l_log = SET_LOG('Val R2: ' || TO_CHAR(L_VAL_R2))
-l_log = SET_LOG('Val R3: ' || TO_CHAR(L_VAL_R3))
-l_log = SET_LOG('Val R4: ' || TO_CHAR(L_VAL_R4))
+l_log = SET_LOG('Val R1_MIN: ' || TO_CHAR(L_VAL_R1_MIN))
+l_log = SET_LOG('Val R1_MAX: ' || TO_CHAR(L_VAL_R1_MAX))
+l_log = SET_LOG('Val R2_MIN: ' || TO_CHAR(L_VAL_R2_MIN))
+l_log = SET_LOG('Val R2_MAX: ' || TO_CHAR(L_VAL_R2_MAX))
+l_log = SET_LOG('Val R3_MIN: ' || TO_CHAR(L_VAL_R3_MIN))
+l_log = SET_LOG('Val R3_MAX: ' || TO_CHAR(L_VAL_R3_MAX))
+l_log = SET_LOG('Val R4_MIN: ' || TO_CHAR(L_VAL_R4_MIN))
+l_log = SET_LOG('Val R4_MAX: ' || TO_CHAR(L_VAL_R4_MAX))
 
 
 /*============================================================================
-  RESOLUCION NUMERICA MAXIMO
-  Unificada para todos los paises, incluida Colombia. L_RANGO_MAX ya viene
+  RESOLUCION NUMERICA MINIMO
+  Unificada para todos los paises, incluida Colombia. L_RANGO_MIN ya viene
   resuelto por pais desde la UDT correspondiente (L_CLAVE_CO para CO,
   L_CLAVE para el resto), ambas entregan el mismo tipo de codigo
   (R1, R1_MIN, R2, R3, R4, PROM, MITAD, NO).
@@ -658,19 +678,19 @@ ELSE IF L_RANGO_MAX = 'R0_MAX' THEN
 ELSE IF L_RANGO_MAX = 'R1_MIN' THEN
     L_DEFAULT_MAX = L_VAL_R1_MIN
 ELSE IF L_RANGO_MAX = 'R1_MAX' OR L_RANGO_MAX = 'R1' THEN
-    L_DEFAULT_MAX = L_VAL_R1
+    L_DEFAULT_MAX = L_VAL_R1_MAX
 ELSE IF L_RANGO_MAX = 'R2_MIN' THEN
     L_DEFAULT_MAX = L_VAL_R2_MIN
 ELSE IF L_RANGO_MAX = 'R2_MAX' OR L_RANGO_MAX = 'R2' THEN
-    L_DEFAULT_MAX = L_VAL_R2
+    L_DEFAULT_MAX = L_VAL_R2_MAX
 ELSE IF L_RANGO_MAX = 'R3_MIN' THEN
     L_DEFAULT_MAX = L_VAL_R3_MIN
 ELSE IF L_RANGO_MAX = 'R3_MAX' OR L_RANGO_MAX = 'R3' THEN
-    L_DEFAULT_MAX = L_VAL_R3
+    L_DEFAULT_MAX = L_VAL_R3_MAX
 ELSE IF L_RANGO_MAX = 'R4_MIN' THEN
     L_DEFAULT_MAX = L_VAL_R4_MIN
 ELSE IF L_RANGO_MAX = 'R4_MAX' OR L_RANGO_MAX = 'R4' THEN
-    L_DEFAULT_MAX = L_VAL_R4
+    L_DEFAULT_MAX = L_VAL_R4_MAX
 ELSE IF L_RANGO_MAX = 'PROM' THEN
     L_DEFAULT_MAX = L_PROM
 ELSE IF L_RANGO_MAX = 'HALF_PROM' THEN

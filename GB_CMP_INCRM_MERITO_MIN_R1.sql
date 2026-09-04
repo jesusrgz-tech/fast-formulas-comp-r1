@@ -14,7 +14,7 @@
 *-----------------------------------------------------------------------------*
 * CREATED BY        : IT-GLOBAL                                               *
 * CREATION DATE     : 07-Abril-2026                                           *
-* LAST UPDATE DATE  : 29-Julio-2026                                           *
+* LAST UPDATE DATE  : 04-Septiembre-2026                                      *
 *-----------------------------------------------------------------------------*
 * Change History:                                                             *
 * Author          | Date            | Ver | Comments                          *
@@ -62,6 +62,19 @@
 *                 |                 |     | "APLICAR INFLACION MINIMA" sin    *
 *                 |                 |     | cambios, aplica igual para ambas  *
 *                 |                 |     | ramas.                            *
+* IT Global       | 04-Sept-2026    |  9  | Homologacion Incremento Legal     *
+*                 |                 |     | (Opcion A): Sobresaliente y       *
+*                 |                 |     | Supera ahora comparan contra      *
+*                 |                 |     | L_MIN_R1_CO en ambos tramos de    *
+*                 |                 |     | apertura, igual que Cumple con lo *
+*                 |                 |     | esperado. Fix Promotion con       *
+*                 |                 |     | evaluacion fuera de catalogo:     *
+*                 |                 |     | ya no cae a flujo estandar,       *
+*                 |                 |     | resuelve a clave 'Promotion' en   *
+*                 |                 |     | ambas ramas (CO y no-CO). Agregado*
+*                 |                 |     | CL y UY a la excepcion de ajuste  *
+*                 |                 |     | de sueldo (periodicidad mensual   *
+*                 |                 |     | LAS, sin multiplicar x30).        *
 ******************************************************************************/
 
 INPUTS ARE CMP_IV_PLAN_START_DATE (text),
@@ -190,8 +203,6 @@ l_log = SET_LOG('Inflacion: ' || TO_CHAR(L_INFLACION))
 
 /*============================================================================
   UMBRALES E INCREMENTO LEGAL - Unicamente para Colombia (L_KEY_UDT = 'CO')
-  Se calculan aqui, antes de construir L_CLAVE_CO, mismo patron ya validado
-  en GB_CMP_INCRM_MERITO_RANGO_R1 y GB_CMP_INCRM_MERITO_MAX_R1.
 ============================================================================*/
 IF L_KEY_UDT = 'CO' THEN
 (
@@ -248,9 +259,6 @@ CHANGE_CONTEXTS(EFFECTIVE_DATE = HR_EXTRACT_DATE, COMPENSATION_RECORD_TYPE = 'CM
 )
 l_log = SET_LOG('Evaluacion: ' || L_EVAL_TXT)
 
-/*============================================================================
-  LEGAL EMPLOYER, GRADE, SUELDO (primera lectura, solo referencia de log)
-============================================================================*/
 CHANGE_CONTEXTS(EFFECTIVE_DATE = HR_EXTRACT_DATE)
 (
     L_LEGAL_EMPLOYER = PER_ASG_ORG_LEGAL_EMPLOYER_NAME
@@ -291,8 +299,9 @@ l_log = SET_LOG('Manager Level actual: ' || MGR_LVL)
   AJUSTE DE SUELDO Y DIVISOR
   Se aplica AQUI, despues del ultimo CHANGE_CONTEXTS que lee L_SUELDO, para
   que ningun bloque posterior sobreescriba el ajuste con el valor crudo.
+  Periodicidad mensual (sin ajuste x30): CO, EC, AR, PE, PY, CL, UY.
 ============================================================================*/
-IF L_KEY_UDT = 'CO' OR L_KEY_UDT = 'EC' OR L_KEY_UDT = 'AR' OR L_KEY_UDT = 'PE' OR L_KEY_UDT = 'PY' THEN
+IF L_KEY_UDT = 'CO' OR L_KEY_UDT = 'EC' OR L_KEY_UDT = 'AR' OR L_KEY_UDT = 'PE' OR L_KEY_UDT = 'PY' OR L_KEY_UDT = 'CL' OR L_KEY_UDT = 'UY' THEN
 (
     L_SUELDO  = L_SUELDO
 )
@@ -405,7 +414,7 @@ l_log = SET_LOG('Level previo (LEVEL1): ' || LEVEL1)
 l_log = SET_LOG('Level change: '          || LEVEL_CHANGE)
 l_log = SET_LOG('PRO flag: '              || PRO)
 */
-
+ 
 
 
 /*============================================================================
@@ -460,7 +469,6 @@ IF PER_ASG_REL_ORIGINAL_DATE_OF_HIRE >= PROMOTION_START_DATE THEN
 
 l_log = SET_LOG('Es intercompania: ' || L_ES_INTERCOMPANIA)
 
-
 /*============================================================================
   VALIDACION DE CONTRATO NO PERMANENTE (catalogo real R1)
 ============================================================================*/
@@ -498,21 +506,20 @@ IF PRO = 'PRO' THEN
     L_CONDICION = 'Promotion'
 ELSE IF L_ES_NO_PERM = 'Y' THEN
     L_CONDICION = 'NonPerm'
-ELSE IF PER_ASG_REL_ORIGINAL_DATE_OF_HIRE >= L_CINCO_MESES
-AND L_ES_INTERCOMPANIA = 'N'
- THEN
+ELSE IF PER_ASG_REL_ORIGINAL_DATE_OF_HIRE >= L_CINCO_MESES 
+AND L_ES_INTERCOMPANIA = 'N' THEN
     L_CONDICION = 'NewHire'
 ELSE
     L_CONDICION = 'None'
-
 l_log = SET_LOG('Condicion: ' || L_CONDICION)
 
 /*============================================================================
-  CONSTRUCCION DE CLAVE UDT (SIN CAMBIOS) - usada por GET_TABLE_VALUE sobre
-  GB_CMP_LAS_LAC_RANGOS_MERITO / GB_CMP_CO_RANGOS_MERITO para todo pais con
-  L_KEY_UDT != 'CO'
+  CONSTRUCCION DE CLAVE UDT - usada por GET_TABLE_VALUE sobre
+  GB_CMP_LAS_LAC_RANGOS_MERITO para todo pais con L_KEY_UDT != 'CO'.
+  Promotion captura cualquier evaluacion (Condicion E: "para todos" segun
+  documento de negocio), sin excepcion de calificacion.
 ============================================================================*/
-IF L_CONDICION = 'Promotion' AND (L_EVAL_TXT = 'Sobresaliente' OR L_EVAL_TXT = 'Supera' OR L_EVAL_TXT = 'Cumple con lo esperado' OR L_EVAL_TXT = 'N/A'  ) THEN
+IF L_CONDICION = 'Promotion' THEN
     L_CLAVE = 'Promotion'
 ELSE IF L_CONDICION = 'NonPerm' THEN
     L_CLAVE = 'NonPerm'
@@ -533,15 +540,18 @@ l_log = SET_LOG('Clave UDT: ' || L_CLAVE)
 
 /*============================================================================
   CLAVE COLOMBIA - calcula la comparacion contra Incremento_Legal y
-  construye la key con sufijo. Solo se calcula si L_KEY_UDT = 'CO'. Usa
-  L_MIN_R1_CO / L_MITAD_PROM_CO / L_INCR_LEGAL ya calculados arriba, en el
-  bloque UMBRALES E INCREMENTO LEGAL. Mismo patron ya validado en
-  GB_CMP_INCRM_MERITO_RANGO_R1 y GB_CMP_INCRM_MERITO_MAX_R1.
+  construye la key con sufijo. Solo se calcula si L_KEY_UDT = 'CO'.
+  Mismo patron ya validado en GB_CMP_INCRM_MERITO_RANGO_R1. Sobresaliente
+  y Supera comparan Incremento Legal en ambos tramos de apertura, igual
+  que Cumple con lo esperado (homologacion Opcion A). Promotion captura
+  cualquier evaluacion distinta de Sobresaliente bajo clave generica.
 ============================================================================*/
 IF L_KEY_UDT = 'CO' THEN
 (
     IF L_CONDICION = 'Promotion' AND L_EVAL_TXT = 'Sobresaliente' THEN
         L_CLAVE_CO = 'Sobresaliente_Prom'
+    ELSE IF L_CONDICION = 'Promotion' THEN
+        L_CLAVE_CO = 'Promotion'
     ELSE IF L_CONDICION = 'NonPerm' THEN
     (
         IF L_INCR_LEGAL > L_MIN_R1_CO THEN
@@ -573,7 +583,12 @@ IF L_KEY_UDT = 'CO' THEN
             L_CLAVE_CO = L_EVAL_TXT || '_LT_MITADPROM'
     )
     ELSE IF L_EVAL_TXT = 'Sobresaliente' AND L_APERTURA < 100 THEN
-        L_CLAVE_CO = 'Sobresaliente_LT100'
+    (
+        IF L_INCR_LEGAL > L_MIN_R1_CO THEN
+            L_CLAVE_CO = 'Sobresaliente_LT100_GE_MINR1'
+        ELSE
+            L_CLAVE_CO = 'Sobresaliente_LT100_LT_MINR1'
+    )
     ELSE IF L_EVAL_TXT = 'Sobresaliente' AND L_APERTURA >= 100 THEN
     (
         IF L_INCR_LEGAL > L_MIN_R1_CO THEN
@@ -596,9 +611,19 @@ IF L_KEY_UDT = 'CO' THEN
             L_CLAVE_CO = 'Cumple con lo esperado_GE100_LT_MINR1'
     )
     ELSE IF L_EVAL_TXT = 'Supera' AND L_APERTURA < 100 THEN
-        L_CLAVE_CO = 'Supera_LT100'
+    (
+        IF L_INCR_LEGAL > L_MIN_R1_CO THEN
+            L_CLAVE_CO = 'Supera_LT100_GE_MINR1'
+        ELSE
+            L_CLAVE_CO = 'Supera_LT100_LT_MINR1'
+    )
     ELSE IF L_EVAL_TXT = 'Supera' AND L_APERTURA >= 100 THEN
-        L_CLAVE_CO = 'Supera_GE100'
+    (
+        IF L_INCR_LEGAL > L_MIN_R1_CO THEN
+            L_CLAVE_CO = 'Supera_GE100_GE_MINR1'
+        ELSE
+            L_CLAVE_CO = 'Supera_GE100_LT_MINR1'
+    )
     ELSE
         L_CLAVE_CO = 'SinClasificar'
 )
@@ -608,7 +633,9 @@ ELSE
 l_log = SET_LOG('Clave switch CO: ' || L_CLAVE_CO)
 
 /*============================================================================
-  LECTURA UDT POR IDIOMA (SIN CAMBIOS)
+  LECTURA UDT POR IDIOMA / PAIS
+  Colombia (L_KEY_UDT = 'CO'): GB_CMP_CO_RANGOS_MERITO por L_CLAVE_CO
+  Resto de paises: GB_CMP_LAS_LAC_RANGOS_MERITO por L_CLAVE
 ============================================================================*/
 
 IF L_KEY_UDT = 'CO' THEN
@@ -623,40 +650,50 @@ ELSE
 )
 
 /*============================================================================
-  CALCULO VALORES NUMERICOS POR RANGO (SIN CAMBIOS)
-  Nota: en este archivo L_VAL_R1..R4 representan el PISO de cada tier
-  (equivalen a los valores _MIN de GB_CMP_INCRM_MERITO_MAX_R1). Se reutilizan
-  tal cual para el piso de cada condicion de Colombia.
+  CALCULO VALORES NUMERICOS POR RANGO
 ============================================================================*/
 IF L_PROM > 10 THEN
 (
-    L_VAL_R1 = L_PROM - 3
-    L_VAL_R2 = L_PROM - 1.5
-    L_VAL_R3 = L_PROM
-    L_VAL_R4 = L_PROM + 1.5
+    L_VAL_R1_MIN = L_PROM - 3
+    L_VAL_R1_MAX = L_PROM - 1.5
+    L_VAL_R2_MIN = L_PROM - 1.5
+    L_VAL_R2_MAX = L_PROM
+    L_VAL_R3_MIN = L_PROM
+    L_VAL_R3_MAX = L_PROM + 1.5
+    L_VAL_R4_MIN = L_PROM + 1.5
     L_VAL_R4_MAX = L_PROM + 3
 )
 ELSE IF L_PROM >= 5 AND L_PROM <= 10 THEN
 (
-    L_VAL_R1 = L_PROM * 0.70
-    L_VAL_R2 = L_PROM * 0.85
-    L_VAL_R3 = L_PROM
-    L_VAL_R4 = L_PROM * 1.15
+    L_VAL_R1_MIN = L_PROM * 0.70
+    L_VAL_R1_MAX = L_PROM * 0.85
+    L_VAL_R2_MIN = L_PROM * 0.85
+    L_VAL_R2_MAX = L_PROM
+    L_VAL_R3_MIN = L_PROM
+    L_VAL_R3_MAX = L_PROM * 1.15
+    L_VAL_R4_MIN = L_PROM * 1.15
     L_VAL_R4_MAX = L_PROM * 1.30
 )
 ELSE
 (
-    L_VAL_R1 = L_PROM - 1.5
-    L_VAL_R2 = L_PROM - 0.75
-    L_VAL_R3 = L_PROM
-    L_VAL_R4 = L_PROM + 0.75
+    L_VAL_R1_MIN = L_PROM - 1.5
+    L_VAL_R1_MAX = L_PROM - 0.75
+    L_VAL_R2_MIN = L_PROM - 0.75
+    L_VAL_R2_MAX = L_PROM
+    L_VAL_R3_MIN = L_PROM
+    L_VAL_R3_MAX = L_PROM + 0.75
+    L_VAL_R4_MIN = L_PROM + 0.75
     L_VAL_R4_MAX = L_PROM + 1.5
 )
-l_log = SET_LOG('Val R1: ' || TO_CHAR(L_VAL_R1))
-l_log = SET_LOG('Val R2: ' || TO_CHAR(L_VAL_R2))
-l_log = SET_LOG('Val R3: ' || TO_CHAR(L_VAL_R3))
-l_log = SET_LOG('Val R4: ' || TO_CHAR(L_VAL_R4))
 
+l_log = SET_LOG('Val R1_MIN: ' || TO_CHAR(L_VAL_R1_MIN))
+l_log = SET_LOG('Val R1_MAX: ' || TO_CHAR(L_VAL_R1_MAX))
+l_log = SET_LOG('Val R2_MIN: ' || TO_CHAR(L_VAL_R2_MIN))
+l_log = SET_LOG('Val R2_MAX: ' || TO_CHAR(L_VAL_R2_MAX))
+l_log = SET_LOG('Val R3_MIN: ' || TO_CHAR(L_VAL_R3_MIN))
+l_log = SET_LOG('Val R3_MAX: ' || TO_CHAR(L_VAL_R3_MAX))
+l_log = SET_LOG('Val R4_MIN: ' || TO_CHAR(L_VAL_R4_MIN))
+l_log = SET_LOG('Val R4_MAX: ' || TO_CHAR(L_VAL_R4_MAX))
 /*============================================================================
   RESOLUCION NUMERICA MINIMO
   Unificada para todos los paises, incluida Colombia. L_RANGO_MIN ya viene
@@ -669,21 +706,21 @@ IF L_RANGO_MIN = 'NO' THEN
 ELSE IF L_RANGO_MIN = 'R0_MIN' THEN
     L_DEFAULT_MIN = 0
 ELSE IF L_RANGO_MIN = 'R0_MAX' THEN
-    L_DEFAULT_MIN = L_VAL_R1
+    L_DEFAULT_MIN = L_VAL_R1_MIN
 ELSE IF L_RANGO_MIN = 'R1_MIN' OR L_RANGO_MIN = 'R1' THEN
-    L_DEFAULT_MIN = L_VAL_R1
+    L_DEFAULT_MIN = L_VAL_R1_MIN
 ELSE IF L_RANGO_MIN = 'R1_MAX' THEN
-    L_DEFAULT_MIN = L_VAL_R2
+    L_DEFAULT_MIN = L_VAL_R1_MAX
 ELSE IF L_RANGO_MIN = 'R2_MIN' OR L_RANGO_MIN = 'R2' THEN
-    L_DEFAULT_MIN = L_VAL_R2
+    L_DEFAULT_MIN = L_VAL_R2_MIN
 ELSE IF L_RANGO_MIN = 'R2_MAX' THEN
-    L_DEFAULT_MIN = L_VAL_R3
+    L_DEFAULT_MIN = L_VAL_R2_MAX
 ELSE IF L_RANGO_MIN = 'R3_MIN' OR L_RANGO_MIN = 'R3' THEN
-    L_DEFAULT_MIN = L_VAL_R3
+    L_DEFAULT_MIN = L_VAL_R3_MIN
 ELSE IF L_RANGO_MIN = 'R3_MAX' THEN
-    L_DEFAULT_MIN = L_VAL_R4
+    L_DEFAULT_MIN = L_VAL_R3_MAX
 ELSE IF L_RANGO_MIN = 'R4_MIN' OR L_RANGO_MIN = 'R4' THEN
-    L_DEFAULT_MIN = L_VAL_R4
+    L_DEFAULT_MIN = L_VAL_R4_MIN
 ELSE IF L_RANGO_MIN = 'R4_MAX' THEN
     L_DEFAULT_MIN = L_VAL_R4_MAX
 ELSE IF L_RANGO_MIN = 'PROM' THEN

@@ -279,7 +279,7 @@ l_log = SET_LOG('Sueldo (crudo): ' || TO_CHAR(L_SUELDO))
 /*============================================================================
   DIVISOR Y CONVERSION DE SUELDO POR PERIODICIDAD DE PAIS
 ============================================================================*/
-IF L_KEY_UDT = 'CO' OR L_KEY_UDT = 'EC' OR L_KEY_UDT = 'AR' OR L_KEY_UDT = 'PE' OR L_KEY_UDT = 'PY' THEN
+IF L_KEY_UDT = 'CO' OR L_KEY_UDT = 'EC' OR L_KEY_UDT = 'AR' OR L_KEY_UDT = 'PE' OR L_KEY_UDT = 'PY' OR L_KEY_UDT = 'CL' OR L_KEY_UDT = 'UY' THEN
 (
     L_SUELDO  = L_SUELDO
 )
@@ -482,15 +482,12 @@ l_log = SET_LOG('Condicion: ' || L_CONDICION)
   CLAVE UDT (SIN CAMBIOS) - usada por GET_TABLE_VALUE sobre
   GB_CMP_LAS_LAC_RANGOS_MERITO para todo pais con L_KEY_UDT != 'CO'
 ============================================================================*/
-IF L_CONDICION = 'Promotion' AND (L_EVAL_TXT = 'Sobresaliente' OR L_EVAL_TXT = 'Supera' OR L_EVAL_TXT = 'Cumple con lo esperado' OR L_EVAL_TXT = 'N/A') THEN
+IF L_CONDICION = 'Promotion' THEN
     L_CLAVE = 'Promotion'
 ELSE IF L_CONDICION = 'NonPerm' THEN
     L_CLAVE = 'NonPerm'
-
 ELSE IF L_CONDICION = 'NewHire' THEN
     L_CLAVE = 'NewHire'
-
-
 ELSE IF L_EVAL_TXT = 'N/A' THEN
     L_CLAVE = 'SinEval'
 ELSE IF L_EVAL_TXT = 'Exit' THEN
@@ -511,7 +508,10 @@ l_log = SET_LOG('Clave UDT: ' || L_CLAVE)
 IF L_KEY_UDT = 'CO' THEN
 (
     IF L_CONDICION = 'Promotion' AND L_EVAL_TXT = 'Sobresaliente' THEN
-        L_CLAVE_CO = 'Sobresaliente_Prom'
+    L_CLAVE_CO = 'Sobresaliente_Prom'
+    
+    ELSE IF L_CONDICION = 'Promotion' THEN
+        L_CLAVE_CO = 'Promotion'
     ELSE IF L_CONDICION = 'NonPerm' THEN
     (
         IF L_INCR_LEGAL > L_MIN_R1 THEN
@@ -543,7 +543,12 @@ IF L_KEY_UDT = 'CO' THEN
             L_CLAVE_CO = L_EVAL_TXT || '_LT_MITADPROM'
     )
     ELSE IF L_EVAL_TXT = 'Sobresaliente' AND L_APERTURA < 100 THEN
-        L_CLAVE_CO = 'Sobresaliente_LT100'
+    (
+        IF L_INCR_LEGAL > L_MIN_R1 THEN
+            L_CLAVE_CO = 'Sobresaliente_LT100_GE_MINR1'
+        ELSE
+            L_CLAVE_CO = 'Sobresaliente_LT100_LT_MINR1'
+    )
     ELSE IF L_EVAL_TXT = 'Sobresaliente' AND L_APERTURA >= 100 THEN
     (
         IF L_INCR_LEGAL > L_MIN_R1 THEN
@@ -566,9 +571,19 @@ IF L_KEY_UDT = 'CO' THEN
             L_CLAVE_CO = 'Cumple con lo esperado_GE100_LT_MINR1'
     )
     ELSE IF L_EVAL_TXT = 'Supera' AND L_APERTURA < 100 THEN
-        L_CLAVE_CO = 'Supera_LT100'
+    (
+        IF L_INCR_LEGAL > L_MIN_R1 THEN
+            L_CLAVE_CO = 'Supera_LT100_GE_MINR1'
+        ELSE
+            L_CLAVE_CO = 'Supera_LT100_LT_MINR1'
+    )
     ELSE IF L_EVAL_TXT = 'Supera' AND L_APERTURA >= 100 THEN
-        L_CLAVE_CO = 'Supera_GE100'
+    (
+        IF L_INCR_LEGAL > L_MIN_R1 THEN
+            L_CLAVE_CO = 'Supera_GE100_GE_MINR1'
+        ELSE
+            L_CLAVE_CO = 'Supera_GE100_LT_MINR1'
+    )
     ELSE
         L_CLAVE_CO = 'SinClasificar'
 )
