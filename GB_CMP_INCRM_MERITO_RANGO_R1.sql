@@ -468,7 +468,6 @@ IF PRO = 'PRO' THEN
 ELSE IF L_ES_NO_PERM = 'Y' THEN
     L_CONDICION = 'NonPerm'
 
-
 ELSE IF PER_ASG_REL_ORIGINAL_DATE_OF_HIRE >= L_CINCO_MESES 
 AND L_ES_INTERCOMPANIA = 'N' THEN
     L_CONDICION = 'NewHire'
@@ -544,10 +543,7 @@ IF L_KEY_UDT = 'CO' THEN
     )
     ELSE IF L_EVAL_TXT = 'Sobresaliente' AND L_APERTURA < 100 THEN
     (
-        IF L_INCR_LEGAL > L_MIN_R1 THEN
-            L_CLAVE_CO = 'Sobresaliente_LT100_GE_MINR1'
-        ELSE
-            L_CLAVE_CO = 'Sobresaliente_LT100_LT_MINR1'
+        L_CLAVE_CO = 'Sobresaliente_LT100'
     )
     ELSE IF L_EVAL_TXT = 'Sobresaliente' AND L_APERTURA >= 100 THEN
     (
