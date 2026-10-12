@@ -301,7 +301,7 @@ l_log = SET_LOG('Manager Level actual: ' || MGR_LVL)
   que ningun bloque posterior sobreescriba el ajuste con el valor crudo.
   Periodicidad mensual (sin ajuste x30): CO, EC, AR, PE, PY, CL, UY.
 ============================================================================*/
-IF L_KEY_UDT = 'CO' OR L_KEY_UDT = 'EC' OR L_KEY_UDT = 'AR' OR L_KEY_UDT = 'PE' OR L_KEY_UDT = 'PY' OR L_KEY_UDT = 'CL' OR L_KEY_UDT = 'UY' THEN
+IF L_KEY_UDT = 'CO' OR L_KEY_UDT = 'EC' OR L_KEY_UDT = 'AR' OR L_KEY_UDT = 'PE' OR L_KEY_UDT = 'PY' OR L_KEY_UDT = 'UY' THEN
 (
     L_SUELDO  = L_SUELDO
 )
