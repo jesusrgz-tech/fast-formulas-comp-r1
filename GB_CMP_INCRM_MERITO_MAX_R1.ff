@@ -274,7 +274,7 @@ l_log = SET_LOG('Sueldo (crudo, segunda lectura): ' || TO_CHAR(L_SUELDO))
 l_log = SET_LOG('Manager Level Actual: ' || MGR_LVL)
 */
 
-IF L_KEY_UDT = 'CO' OR L_KEY_UDT = 'EC' OR L_KEY_UDT = 'AR' OR L_KEY_UDT = 'PE' OR L_KEY_UDT = 'PY' THEN
+IF L_KEY_UDT = 'CO' OR L_KEY_UDT = 'EC' OR L_KEY_UDT = 'AR' OR L_KEY_UDT = 'PE' OR L_KEY_UDT = 'PY' OR L_KEY_UDT = 'UY' THEN
 (
     L_SUELDO  = L_SUELDO
 )
