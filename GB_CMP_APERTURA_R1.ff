@@ -137,7 +137,7 @@ ELSE
 )
 
 
-IF L_KEY_UDT = 'CO' OR L_KEY_UDT = 'EC' OR L_KEY_UDT = 'AR' OR L_KEY_UDT = 'PE' OR L_KEY_UDT = 'PY' THEN
+IF L_KEY_UDT = 'CO' OR L_KEY_UDT = 'EC' OR L_KEY_UDT = 'AR' OR L_KEY_UDT = 'PE' OR L_KEY_UDT = 'PY' OR L_KEY_UDT = 'CL' OR L_KEY_UDT = 'UY' THEN
 (
     L_SUELDO  = L_SUELDO
 )
@@ -145,8 +145,6 @@ ELSE
 (
     L_SUELDO  = L_SUELDO * 30
 )
-
-l_log = SET_LOG('Sueldo normalizado: ' || TO_CHAR(L_SUELDO))
 
 L_DIVISOR = 30
 
