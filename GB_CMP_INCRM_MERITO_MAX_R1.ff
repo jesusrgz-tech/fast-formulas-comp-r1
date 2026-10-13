@@ -60,6 +60,12 @@
 *                 |                 |     | 'Sobresaliente_LT100' sin sufijo  *
 *                 |                 |     | de Incremento Legal, homologado   *
 *                 |                 |     | con GB_CMP_INCRM_MERITO_RANGO_R1. *
+* IT Global       | 13-Oct-2026     |  9  | Deteccion intercompania con la    *
+*                 |                 |     | estructura de NEW_HIRE_RETROFIT   *
+*                 |                 |     | v12: reason code leido en fecha   *
+*                 |                 |     | fin del assignment anterior,      *
+*                 |                 |     | filtro TERMINATION y comparacion  *
+*                 |                 |     | de PER_ASG_LEGAL_ENTITY_ID.       *
 ******************************************************************************/
 
 INPUTS ARE CMP_IV_PLAN_START_DATE (text),
@@ -85,6 +91,7 @@ DEFAULT FOR CMP_ASSIGNMENT_SALARY_AMOUNT IS 0
 DEFAULT FOR PER_ASG_ORG_LEGAL_EMPLOYER_NAME IS 'N/LE'
 DEFAULT FOR PER_ASG_REL_ORIGINAL_DATE_OF_HIRE IS '1901/01/01' (date)
 DEFAULT FOR PER_ASG_ACTION_REASON_CODE IS 'N/A'
+DEFAULT FOR PER_ASG_LEGAL_ENTITY_ID IS 0
 DEFAULT_DATA_VALUE FOR PER_HIST_ASG_EFFECTIVE_START_DATE IS '1900/01/01' (date)
 DEFAULT_DATA_VALUE FOR PER_HIST_ASG_EFFECTIVE_END_DATE IS '4712/12/31' (date)
 DEFAULT_DATA_VALUE FOR PER_HIST_ASG_ASSIGNMENT_ID IS 0
@@ -267,6 +274,7 @@ CHANGE_CONTEXTS(EFFECTIVE_DATE = HR_EXTRACT_DATE)
     L_SUELDO           = CMP_ASSIGNMENT_SALARY_AMOUNT
     L_PER_ID           = PER_ASG_PERSON_ID
     MGR_LVL            = PER_ASG_JOB_MANAGER_LEVEL
+    L_LE_ACTUAL        = PER_ASG_LEGAL_ENTITY_ID
     ASSIGN_START_DATE  = PER_ASG_EFFECTIVE_START_DATE
     ASSIGN_END_DATE    = PER_ASG_EFFECTIVE_END_DATE
 )
@@ -394,26 +402,51 @@ l_log = SET_LOG('PRO flag: '              || PRO)
 
 /*============================================================================
   DETECCION DE TRANSFERENCIA INTERCOMPANIA
-  Misma logica validada en GB_CMP_NEW_HIRE_RETROFIT v11.
+  Misma estructura validada en GB_CMP_NEW_HIRE_RETROFIT v12. El reason code,
+  action code y entidad legal del assignment anterior se leen en la fecha
+  fin de su fila historica (L_H_FIN). Antes se leian en L_HIRE_DATE, fecha
+  en la que el assignment anterior ya no existe, por lo que el DBI regresaba
+  siempre el default 'N/A'. Solo se acepta como candidato una fila con
+  action code TERMINATION; si no lo es, el loop sigue buscando hacia atras.
+  Es intercompania si cambia la entidad legal o, con la misma entidad legal,
+  si el reason code esta en el catalogo R1.
 ============================================================================*/
 L_ES_INTERCOMPANIA = 'N'
 
 IF PER_ASG_REL_ORIGINAL_DATE_OF_HIRE >= PROMOTION_START_DATE THEN
 (
     L_DIA_ANT_HIRE = ADD_DAYS(L_HIRE_DATE, -1)
-    L_ASG_ANT = 0
-    L_TOTAL_HIST = PER_HIST_ASG_EFFECTIVE_START_DATE.LAST(-1)
-    L_H = L_TOTAL_HIST
+    L_ASG_ANT      = 0
+    L_RC           = 'N/A'
+    L_AC_TEMP      = 'N/A'
+    L_LE_TEMP      = 0
+    L_LE_ANT       = 0
+    L_TOTAL_HIST   = PER_HIST_ASG_EFFECTIVE_START_DATE.LAST(-1)
+    L_H            = L_TOTAL_HIST
     WHILE L_H >= 1 LOOP
     (
         L_H_INICIO = PER_HIST_ASG_EFFECTIVE_START_DATE[L_H]
-        L_H_FIN = PER_HIST_ASG_EFFECTIVE_END_DATE[L_H]
-        L_H_ASG = PER_HIST_ASG_ASSIGNMENT_ID[L_H]
+        L_H_FIN    = PER_HIST_ASG_EFFECTIVE_END_DATE[L_H]
+        L_H_ASG    = PER_HIST_ASG_ASSIGNMENT_ID[L_H]
 
         IF L_H_ASG <> L_CTX_ASG AND L_DIA_ANT_HIRE >= L_H_INICIO AND L_DIA_ANT_HIRE <= L_H_FIN AND L_ASG_ANT = 0 THEN
         (
-            L_ASG_ANT = L_H_ASG
-            L_H = 0
+            CHANGE_CONTEXTS(HR_ASSIGNMENT_ID = L_H_ASG, EFFECTIVE_DATE = L_H_FIN)
+            (
+                L_RC      = PER_ASG_ACTION_REASON_CODE
+                L_AC_TEMP = PER_ASG_ACTION_CODE
+                L_LE_TEMP = PER_ASG_LEGAL_ENTITY_ID
+            )
+            l_log = SET_LOG('Candidato assignment ' || TO_CHAR(L_H_ASG) || ' fecha fin ' || TO_CHAR(L_H_FIN, 'YYYY/MM/DD') || ' action code: ' || L_AC_TEMP || ' reason code: ' || L_RC || ' legal entity: ' || TO_CHAR(L_LE_TEMP))
+
+            IF L_RC <> 'N/A' AND L_AC_TEMP = 'TERMINATION' THEN
+            (
+                L_ASG_ANT = L_H_ASG
+                L_LE_ANT  = L_LE_TEMP
+                L_H       = 0
+            )
+            ELSE
+                L_H = L_H - 1
         )
         ELSE
             L_H = L_H - 1
@@ -421,22 +454,20 @@ IF PER_ASG_REL_ORIGINAL_DATE_OF_HIRE >= PROMOTION_START_DATE THEN
 
     IF L_ASG_ANT <> 0 THEN
     (
-        L_RC = 'N/A'
-        CHANGE_CONTEXTS(HR_ASSIGNMENT_ID = L_ASG_ANT, EFFECTIVE_DATE = L_HIRE_DATE)
-        (
-            L_RC = PER_ASG_ACTION_REASON_CODE
-        )
         l_log = SET_LOG('Reason code assignment anterior: ' || L_RC)
+        l_log = SET_LOG('Legal entity anterior: ' || TO_CHAR(L_LE_ANT) || ' actual: ' || TO_CHAR(L_LE_ACTUAL))
 
-         IF L_RC = '28'
-        OR L_RC = 'C28'
-        OR L_RC = '00'
-        OR L_RC = '0004'
-        OR L_RC = '0032'
-        OR L_RC = 'U00'
-        OR L_RC = '115'
-        OR L_RC = '64'
-        OR L_RC = '114'
+        IF L_LE_ANT <> L_LE_ACTUAL THEN
+            L_ES_INTERCOMPANIA = 'Y'
+        ELSE IF L_RC = '28'
+            OR L_RC = 'C28'
+            OR L_RC = '00'
+            OR L_RC = '0004'
+            OR L_RC = '0032'
+            OR L_RC = 'U00'
+            OR L_RC = '115'
+            OR L_RC = '64'
+            OR L_RC = '114'
         THEN
             L_ES_INTERCOMPANIA = 'Y'
     )
