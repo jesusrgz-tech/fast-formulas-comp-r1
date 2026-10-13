@@ -17,7 +17,7 @@
 *-----------------------------------------------------------------------------*
 * CREATED BY        : IT-GLOBAL                                               *
 * CREATION DATE     : 07-Abril-2026                                           *
-* LAST UPDATE DATE  : 29-Julio-2026                                           *
+* LAST UPDATE DATE  : 13-Octubre-2026                                          *
 *-----------------------------------------------------------------------------*
 * Change History:                                                             *
 * Author          | Date            | Ver | Comments                          *
@@ -55,6 +55,11 @@
 *                 |                 |     | sin rama separada para Colombia.  *
 *                 |                 |     | Ningun texto ni numero hardcode   *
 *                 |                 |     | en formula para Colombia.         *
+* IT Global       | 13-Oct-2026     |  8  | Clave Colombia Sobresaliente con  *
+*                 |                 |     | apertura < 100 vuelve a           *
+*                 |                 |     | 'Sobresaliente_LT100' sin sufijo  *
+*                 |                 |     | de Incremento Legal, homologado   *
+*                 |                 |     | con GB_CMP_INCRM_MERITO_RANGO_R1. *
 ******************************************************************************/
 
 INPUTS ARE CMP_IV_PLAN_START_DATE (text),
@@ -548,12 +553,7 @@ IF L_KEY_UDT = 'CO' THEN
             L_CLAVE_CO = L_EVAL_TXT || '_LT_MITADPROM'
     )
     ELSE IF L_EVAL_TXT = 'Sobresaliente' AND L_APERTURA < 100 THEN
-    (
-        IF L_INCR_LEGAL > L_MIN_R1_CO THEN
-            L_CLAVE_CO = 'Sobresaliente_LT100_GE_MINR1'
-        ELSE
-            L_CLAVE_CO = 'Sobresaliente_LT100_LT_MINR1'
-    )
+        L_CLAVE_CO = 'Sobresaliente_LT100'
     ELSE IF L_EVAL_TXT = 'Sobresaliente' AND L_APERTURA >= 100 THEN
     (
         IF L_INCR_LEGAL > L_MIN_R1_CO THEN

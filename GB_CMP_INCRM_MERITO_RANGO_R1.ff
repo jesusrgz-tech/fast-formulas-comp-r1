@@ -2,7 +2,7 @@
 * FORMULA NAME      : GB_CMP_INCRM_MERITO_RANGO_R1                            *
 * CREATED_BY        : IT-GLOBAL                                               *
 * CREATION_DATE     : 07 de Abril del 2026                                    *
-* LAST_UPDATE_DATE   : 29 de Julio del 2026                                   *
+* LAST_UPDATE_DATE   : 13 de Octubre del 2026                                  *
 * FORMULA TYPE       : Compensation Default and Override                     *
 * DESCRIPTION        : Obtiene el texto del rango de incremento por merito    *
 *                      para paises LAC/LAS y Mexico. Key por pais derivada    *
@@ -70,6 +70,10 @@
 *                 |                 |     | L_CLAVE_CO (no L_CLAVE) para      *
 *                 |                 |     | Colombia. Ningun texto            *
 *                 |                 |     | hardcodeado en formula.           *
+* IT Global       | 13-Oct-2026     | 15  | Se retira CL de la excepcion de   *
+*                 |                 |     | ajuste de sueldo (CL se multiplica*
+*                 |                 |     | x30), homologado con APERTURA_R1, *
+*                 |                 |     | MAX_R1 y MIN_R1.                  *
 ******************************************************************************/
 
 INPUTS ARE CMP_IV_PLAN_START_DATE (text),
@@ -279,7 +283,7 @@ l_log = SET_LOG('Sueldo (crudo): ' || TO_CHAR(L_SUELDO))
 /*============================================================================
   DIVISOR Y CONVERSION DE SUELDO POR PERIODICIDAD DE PAIS
 ============================================================================*/
-IF L_KEY_UDT = 'CO' OR L_KEY_UDT = 'EC' OR L_KEY_UDT = 'AR' OR L_KEY_UDT = 'PE' OR L_KEY_UDT = 'PY' OR L_KEY_UDT = 'CL' OR L_KEY_UDT = 'UY' THEN
+IF L_KEY_UDT = 'CO' OR L_KEY_UDT = 'EC' OR L_KEY_UDT = 'AR' OR L_KEY_UDT = 'PE' OR L_KEY_UDT = 'PY' OR L_KEY_UDT = 'UY' THEN
 (
     L_SUELDO  = L_SUELDO
 )

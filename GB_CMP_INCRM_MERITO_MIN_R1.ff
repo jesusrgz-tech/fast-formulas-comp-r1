@@ -14,7 +14,7 @@
 *-----------------------------------------------------------------------------*
 * CREATED BY        : IT-GLOBAL                                               *
 * CREATION DATE     : 07-Abril-2026                                           *
-* LAST UPDATE DATE  : 04-Septiembre-2026                                      *
+* LAST UPDATE DATE  : 13-Octubre-2026                                         *
 *-----------------------------------------------------------------------------*
 * Change History:                                                             *
 * Author          | Date            | Ver | Comments                          *
@@ -75,6 +75,14 @@
 *                 |                 |     | CL y UY a la excepcion de ajuste  *
 *                 |                 |     | de sueldo (periodicidad mensual   *
 *                 |                 |     | LAS, sin multiplicar x30).        *
+* IT Global       | 12-Oct-2026     | 10  | Se retira CL de la excepcion de   *
+*                 |                 |     | ajuste de sueldo (CL se multiplica*
+*                 |                 |     | x30), homologado con APERTURA_R1. *
+* IT Global       | 13-Oct-2026     | 11  | Clave Colombia Sobresaliente con  *
+*                 |                 |     | apertura < 100 vuelve a           *
+*                 |                 |     | 'Sobresaliente_LT100' sin sufijo  *
+*                 |                 |     | de Incremento Legal, homologado   *
+*                 |                 |     | con GB_CMP_INCRM_MERITO_RANGO_R1. *
 ******************************************************************************/
 
 INPUTS ARE CMP_IV_PLAN_START_DATE (text),
@@ -299,7 +307,7 @@ l_log = SET_LOG('Manager Level actual: ' || MGR_LVL)
   AJUSTE DE SUELDO Y DIVISOR
   Se aplica AQUI, despues del ultimo CHANGE_CONTEXTS que lee L_SUELDO, para
   que ningun bloque posterior sobreescriba el ajuste con el valor crudo.
-  Periodicidad mensual (sin ajuste x30): CO, EC, AR, PE, PY, CL, UY.
+  Periodicidad mensual (sin ajuste x30): CO, EC, AR, PE, PY, UY.
 ============================================================================*/
 IF L_KEY_UDT = 'CO' OR L_KEY_UDT = 'EC' OR L_KEY_UDT = 'AR' OR L_KEY_UDT = 'PE' OR L_KEY_UDT = 'PY' OR L_KEY_UDT = 'UY' THEN
 (
@@ -583,12 +591,7 @@ IF L_KEY_UDT = 'CO' THEN
             L_CLAVE_CO = L_EVAL_TXT || '_LT_MITADPROM'
     )
     ELSE IF L_EVAL_TXT = 'Sobresaliente' AND L_APERTURA < 100 THEN
-    (
-        IF L_INCR_LEGAL > L_MIN_R1_CO THEN
-            L_CLAVE_CO = 'Sobresaliente_LT100_GE_MINR1'
-        ELSE
-            L_CLAVE_CO = 'Sobresaliente_LT100_LT_MINR1'
-    )
+        L_CLAVE_CO = 'Sobresaliente_LT100'
     ELSE IF L_EVAL_TXT = 'Sobresaliente' AND L_APERTURA >= 100 THEN
     (
         IF L_INCR_LEGAL > L_MIN_R1_CO THEN
