@@ -71,7 +71,7 @@ ELSE
 l_log = SET_LOG('Key UDT: ' || L_KEY_UDT)
 
 /************************** OBTENER VALOR DE UDT ****************************/
-L_VALOR_RAW = GET_TABLE_VALUE('GB_CMP_LAC_LAS_INC_PLAN_SALARIAL', 'Valor_Inc_Plan_Salarial', L_KEY_UDT)
+L_VALOR_RAW = GET_TABLE_VALUE('GB_CMP_LAC_LAS_INC_PLAN_SALARIAL', 'Valor_Inc_Plan_Salarial', L_KEY_UDT, '0')
 
 l_log = SET_LOG('Valor UDT RAW: ' || L_VALOR_RAW)
 

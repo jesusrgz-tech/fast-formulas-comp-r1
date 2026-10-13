@@ -97,7 +97,7 @@ l_log = SET_LOG('Key pais UDT: ' || L_KEY_UDT)
 /*============================================================================
   PROMEDIO UDT
 ============================================================================*/
-L_UDT_PROM = TO_NUMBER(GET_TABLE_VALUE('GB_CMP_LAC_LAS_INCREMENTO_MERITO', 'Incremento_Promedio', L_KEY_UDT))
+L_UDT_PROM = TO_NUMBER(GET_TABLE_VALUE('GB_CMP_LAC_LAS_INCREMENTO_MERITO', 'Incremento_Promedio', L_KEY_UDT, '0'))
 
 l_log = SET_LOG('Promedio UDT: ' || TO_CHAR(L_UDT_PROM))
 
