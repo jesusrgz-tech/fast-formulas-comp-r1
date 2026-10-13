@@ -1,14 +1,14 @@
 /******************************************************************************
 * FORMULA NAME      : GB_CMP_APERTURA_R1                                      *
 * FORMULA TYPE      : Compensation Default and Override                       *
-* DESCRIPTION       : Calcula la apertura del colaborador para Region 4.      *
-*                     ESP y PT: sueldo anual dividido entre 365.              *
-*                     MOR: sueldo diario dividido entre 30.                   *
+* DESCRIPTION       : Calcula la apertura del colaborador para R1.            *
+*                     CO, EC, AR, PE, PY, UY: sueldo mensual sin ajuste.      *
+*                     Resto de paises: sueldo diario x30. Divisor 30.         *
 * Formula: ((Sueldo - Min) / ((Max - Min) / 30)) + 70                         *
 *-----------------------------------------------------------------------------*
 * CREATED BY        : IT-GLOBAL                                               *
 * CREATION DATE     : 10-Abril-2026                                           *
-* LAST UPDATE DATE  : 02-Julio-2026                                           *
+* LAST UPDATE DATE  : 13-Octubre-2026                                         *
 *-----------------------------------------------------------------------------*
 * Change History:                                                             *
 * Author          | Date            | Ver | Comments                          *
@@ -26,6 +26,10 @@
 *                 |                 |     | traian el grade rate vigente hoy *
 *                 |                 |     | en vez del vigente al cierre     *
 *                 |                 |     | del plan                         *
+* IT Global       | 13-Oct-2026     |  5  | Limpieza: descripcion R1, se     *
+*                 |                 |     | eliminan CHANGE_CONTEXTS y       *
+*                 |                 |     | acotamiento de fecha duplicados. *
+*                 |                 |     | Sin cambio de logica.            *
 ******************************************************************************/
 
 INPUTS ARE CMP_IV_PLAN_EXTRACTION_DATE (text),
@@ -112,29 +116,17 @@ l_log = SET_LOG('Key pais UDT: ' || L_KEY_UDT)
 
 
 /*============================================================================
-  ACOTAR FECHA EFECTIVA AL CIERRE DEL CICLO DEL PLAN
+  DATOS DEL ASSIGNMENT
 ============================================================================*/
 CHANGE_CONTEXTS(EFFECTIVE_DATE = HR_EXTRACT_DATE)
 (
-    L_LEGAL_EMPLOYER = PER_ASG_ORG_LEGAL_EMPLOYER_NAME
     L_GRADE          = PER_ASG_GRADE_ID
     L_SUELDO         = CMP_ASSIGNMENT_SALARY_AMOUNT
     L_PER_ID         = PER_ASG_PERSON_ID
 )
 
-l_log = SET_LOG('Legal Employer: ' || L_LEGAL_EMPLOYER)
 l_log = SET_LOG('Grade ID: '       || TO_CHAR(L_GRADE))
 l_log = SET_LOG('Sueldo: '         || TO_CHAR(L_SUELDO))
-
-IF HR_EXTRACT_DATE > L_PL_END_DATE THEN
-(
-    L_FECHA_CONTEXTO = L_PL_END_DATE
-    l_log = SET_LOG('Extraccion posterior al cierre del ciclo, se acota a fin de ciclo')
-)
-ELSE
-(
-    L_FECHA_CONTEXTO = HR_EXTRACT_DATE
-)
 
 
 IF L_KEY_UDT = 'CO' OR L_KEY_UDT = 'EC' OR L_KEY_UDT = 'AR' OR L_KEY_UDT = 'PE' OR L_KEY_UDT = 'PY' OR L_KEY_UDT = 'UY' THEN

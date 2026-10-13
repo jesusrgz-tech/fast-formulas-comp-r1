@@ -3,14 +3,15 @@
 * FORMULA TYPE      : Compensation Default and Override                       *
 * DESCRIPTION       : Obtiene el porcentaje minimo de incremento por merito   *
 *                     para paises LAC/LAS y Mexico leyendo desde UDT por      *
-*                     pais (comportamiento sin cambios respecto a version 7   *
-*                     para todo pais con L_KEY_UDT distinto de 'CO'). Para    *
-*                     Colombia (L_KEY_UDT = 'CO') el minimo se hardcodea en   *
-*                     formula replicando la logica de comparacion contra      *
-*                     Incremento Legal ya validada en GB_CMP_INCRM_MERITO_    *
-*                     RANGO_R1 y en GB_CMP_INCRM_MERITO_MAX_R1, tomando el    *
-*                     piso inferior de cada rango de texto como valor         *
-*                     numerico de minimo.                                     *
+*                     pais. Para Colombia (L_KEY_UDT = 'CO') la formula       *
+*                     calcula la comparacion de Incremento_Legal contra       *
+*                     Minimo Rango 1 / Mitad de Incremento Promedio,          *
+*                     construye L_CLAVE_CO con sufijo y lee el codigo de      *
+*                     rango (Rango_Minimo) desde GB_CMP_CO_RANGOS_MERITO.     *
+*                     Para el resto de paises se lee desde                    *
+*                     GB_CMP_LAS_LAC_RANGOS_MERITO por L_CLAVE. La            *
+*                     resolucion numerica del codigo de rango es unica para   *
+*                     todos los paises.                                       *
 *-----------------------------------------------------------------------------*
 * CREATED BY        : IT-GLOBAL                                               *
 * CREATION DATE     : 07-Abril-2026                                           *
@@ -89,6 +90,12 @@
 *                 |                 |     | fin del assignment anterior,      *
 *                 |                 |     | filtro TERMINATION y comparacion  *
 *                 |                 |     | de PER_ASG_LEGAL_ENTITY_ID.       *
+* IT Global       | 13-Oct-2026     | 13  | Limpieza: se elimina              *
+*                 |                 |     | CHANGE_CONTEXTS duplicado (misma  *
+*                 |                 |     | lectura que DATOS DEL ASSIGNMENT).*
+*                 |                 |     | Descripcion y comentarios         *
+*                 |                 |     | alineados al codigo. Sin cambio   *
+*                 |                 |     | de logica.                        *
 ******************************************************************************/
 
 INPUTS ARE CMP_IV_PLAN_START_DATE (text),
@@ -274,20 +281,8 @@ CHANGE_CONTEXTS(EFFECTIVE_DATE = HR_EXTRACT_DATE, COMPENSATION_RECORD_TYPE = 'CM
 )
 l_log = SET_LOG('Evaluacion: ' || L_EVAL_TXT)
 
-CHANGE_CONTEXTS(EFFECTIVE_DATE = HR_EXTRACT_DATE)
-(
-    L_LEGAL_EMPLOYER = PER_ASG_ORG_LEGAL_EMPLOYER_NAME
-    L_GRADE          = PER_ASG_GRADE_ID
-    L_SUELDO         = CMP_ASSIGNMENT_SALARY_AMOUNT
-    L_PER_ID         = PER_ASG_PERSON_ID
-)
-
-l_log = SET_LOG('Legal Employer: ' || L_LEGAL_EMPLOYER)
-l_log = SET_LOG('Grade ID: '       || TO_CHAR(L_GRADE))
-l_log = SET_LOG('Sueldo (crudo, primera lectura): ' || TO_CHAR(L_SUELDO))
-
 /*============================================================================
-  DATOS DEL ASSIGNMENT (segunda lectura de L_SUELDO, prevalece esta)
+  DATOS DEL ASSIGNMENT
 ============================================================================*/
 CHANGE_CONTEXTS(EFFECTIVE_DATE = HR_EXTRACT_DATE)
 (

@@ -2,12 +2,12 @@
 * FORMULA NAME      : GB_CMP_INCRM_MERITO_PORCENTAJE                     *
 * FORMULA TYPE      : Compensation Default and Override                       *
 * DESCRIPTION       : Obtiene el porcentaje promedio de incremento por merito *
-*                     desde UDT GB_INCREMENTO_MERITO para R4 (Espana,         *
-*                     Portugal, Marruecos). Key derivada del Legal Employer.  *
+*                     desde UDT GB_CMP_LAC_LAS_INCREMENTO_MERITO para R1      *
+*                     (LAC/LAS y Mexico). Key derivada del Legal Employer.    *
 *-----------------------------------------------------------------------------*
 * CREATED BY        : IT-GLOBAL                                               *
 * CREATION DATE     : 08-Mayo-2026                                            *
-* LAST UPDATE DATE  : 27-Mayo-2026                                            *
+* LAST UPDATE DATE  : 13-Octubre-2026                                         *
 *-----------------------------------------------------------------------------*
 * Change History:                                                             *
 * Author          | Date            | Ver | Comments                          *
@@ -16,6 +16,8 @@
 * IT Global       | 27-Mayo-2026    |  2  | Adaptacion R4: key por pais       *
 *                 |                 |     | MOR/ESP/PT desde Legal Employer,  *
 *                 |                 |     | correccion nombre UDT             *
+* IT Global       | 13-Oct-2026     |  3  | Limpieza: descripcion y logs R1,  *
+*                 |                 |     | default en GET_TABLE_VALUE.       *
 ******************************************************************************/
 
 INPUTS ARE CMP_IV_PLAN_START_DATE (text),
@@ -30,7 +32,7 @@ DEFAULT FOR PER_ASG_ORG_LEGAL_EMPLOYER_NAME IS 'N/LE'
 ============================================================================*/
 HR_EXTRACT_DATE = TO_DATE(CMP_IV_PLAN_EXTRACTION_DATE, 'YYYY/MM/DD')
 
-l_log = SET_LOG('*** INICIO GB_CMP_INCRM_MERITO_PORCENTAJE_R4 ***')
+l_log = SET_LOG('*** INICIO GB_CMP_INCRM_MERITO_PORCENTAJE ***')
 
 /*============================================================================
   LEGAL EMPLOYER Y KEY UDT POR PAIS

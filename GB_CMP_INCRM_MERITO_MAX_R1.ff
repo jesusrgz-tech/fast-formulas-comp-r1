@@ -66,6 +66,12 @@
 *                 |                 |     | fin del assignment anterior,      *
 *                 |                 |     | filtro TERMINATION y comparacion  *
 *                 |                 |     | de PER_ASG_LEGAL_ENTITY_ID.       *
+* IT Global       | 13-Oct-2026     | 10  | Limpieza: se elimina              *
+*                 |                 |     | CHANGE_CONTEXTS duplicado (misma  *
+*                 |                 |     | lectura que DATOS DEL ASSIGNMENT).*
+*                 |                 |     | Descripcion y comentarios         *
+*                 |                 |     | alineados al codigo. Sin cambio   *
+*                 |                 |     | de logica.                        *
 ******************************************************************************/
 
 INPUTS ARE CMP_IV_PLAN_START_DATE (text),
@@ -250,18 +256,6 @@ CHANGE_CONTEXTS(EFFECTIVE_DATE = HR_EXTRACT_DATE, COMPENSATION_RECORD_TYPE = 'CM
 )
 l_log = SET_LOG('Evaluacion: ' || L_EVAL_TXT)
 
-CHANGE_CONTEXTS(EFFECTIVE_DATE = HR_EXTRACT_DATE)
-(
-    L_LEGAL_EMPLOYER = PER_ASG_ORG_LEGAL_EMPLOYER_NAME
-    L_GRADE          = PER_ASG_GRADE_ID
-    L_SUELDO         = CMP_ASSIGNMENT_SALARY_AMOUNT
-    L_PER_ID         = PER_ASG_PERSON_ID
-)
-/*
-l_log = SET_LOG('Legal Employer: ' || L_LEGAL_EMPLOYER)
-l_log = SET_LOG('Grade ID: '       || TO_CHAR(L_GRADE))
-l_log = SET_LOG('Sueldo (crudo, primera lectura): ' || TO_CHAR(L_SUELDO))
-*/
 /*============================================================================
   DATOS DEL ASSIGNMENT
 ============================================================================*/
@@ -694,8 +688,8 @@ l_log = SET_LOG('Val R4_MAX: ' || TO_CHAR(L_VAL_R4_MAX))
 
 
 /*============================================================================
-  RESOLUCION NUMERICA MINIMO
-  Unificada para todos los paises, incluida Colombia. L_RANGO_MIN ya viene
+  RESOLUCION NUMERICA MAXIMO
+  Unificada para todos los paises, incluida Colombia. L_RANGO_MAX ya viene
   resuelto por pais desde la UDT correspondiente (L_CLAVE_CO para CO,
   L_CLAVE para el resto), ambas entregan el mismo tipo de codigo
   (R1, R1_MIN, R2, R3, R4, PROM, MITAD, NO).
