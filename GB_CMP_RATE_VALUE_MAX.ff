@@ -2,13 +2,15 @@
 FORMULA NAME      : GB_CMP_RATE_VALUE_MAX
 CREATED_BY        : IT-GLOBAL
 CREATION_DATE     : 
-LAST_UPDATE_DATE  : 08 de Julio del 2026
+LAST_UPDATE_DATE  : 13 de Octubre del 2026
 FORMULA TYPE      : Compensation Default and Override
 DESCRIPTION       : Obtiene el valor maximo del grado. Fecha de contexto
                     acotada al fin del ciclo del plan. Value Sets reciben
                     P_EFFECTIVE_DATE para no resolver contra SYSDATE real.
                     Loguea el nombre del Rate/Plan Salarial via Value Set
                     DEBUG_PLA_SALARIAL para facilitar auditoria en logs.
+                    13-Oct-2026: se elimina llamada duplicada a
+                    DEBUG_PLA_SALARIAL fuera del IF y se corrige log.
 **********************************************************************/
 
 INPUTS ARE CMP_IV_PLAN_EXTRACTION_DATE (text),
@@ -67,15 +69,11 @@ L_RATE_ID = TO_NUM(GET_VALUE_SET('GB_CMP_ASG_RATE_ID', L_PARAM))
 l_log = SET_LOG('Rate ID: ' || TO_CHAR(L_RATE_ID))
 
 
-    L_PARAM_RATE_NAME = '|=P_RATE_ID=' || TO_CHAR(L_RATE_ID)
-    L_RATE_NAME = GET_VALUE_SET('DEBUG_PLA_SALARIAL', L_PARAM_RATE_NAME)
-    l_log = SET_LOG('Plan Salarial del SQL Extraction : ' || L_RATE_NAME)
-
 IF L_RATE_ID > 0 THEN
 (
     L_PARAM_RATE_NAME = '|=P_RATE_ID=' || TO_CHAR(L_RATE_ID)
     L_RATE_NAME = GET_VALUE_SET('DEBUG_PLA_SALARIAL', L_PARAM_RATE_NAME)
-    l_log = SET_LOG('Plan Salarial entro a la rama de no tener rate id: ' || L_RATE_NAME)
+    l_log = SET_LOG('Plan Salarial (Rate Name): ' || L_RATE_NAME)
 
     L_PARAM = '|=P_ASSIGNMENT_GRADE=' || TO_CHAR(L_GRADE) || '|P_ASSIGNMENT_RATE=' || TO_CHAR(L_RATE_ID) || '|P_EFFECTIVE_DATE=' || TO_CHAR(L_FECHA_CONTEXTO, 'YYYY/MM/DD')
     l_log = SET_LOG('Param (con Rate ID): ' || L_PARAM)

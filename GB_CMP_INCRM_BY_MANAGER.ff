@@ -5,7 +5,7 @@
 *                     para el Budget Page. Resuelve dinamicamente el nombre   *
 *                     del plan desde CMP_IV_PLAN_ID via Value Set             *
 *                     GB_CMP_VS_PLAN_NAME y deriva la key de pais para leer   *
-*                     el promedio desde UDT GB_INCREMENTO_MERITO.             *
+*                     el promedio desde UDT GB_CMP_LAC_LAS_INCREMENTO_MERITO. *
 *                     Formula unica para todos los planes R1.                 *
 *-----------------------------------------------------------------------------*
 * CREATED BY        : IT-GLOBAL                                               *
